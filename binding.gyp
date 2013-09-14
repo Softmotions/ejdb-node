@@ -51,7 +51,7 @@
                     '-lz -lpthread -lm -lc'
                 ]
             }],
-            [ 'OS=="mac", {
+            [ 'OS=="mac"', {
                 'defines': ['_DARWIN_USE_64_BIT_INODE=1'],
                 'cflags_cc!' : [ '-fno-exceptions' ],
                 'xcode_settings': {
