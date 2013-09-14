@@ -26,10 +26,13 @@
 *.changes
 *.pyc
 *.tags
+.workspace
 .dep.inc
 /ejdbdll
 /node_modules
 /configure.gypi
+/ejdb/misc
+/ejdb/tools
 /ejdb/tcejdb/bros
 /ejdb/tcejdb/doc
 /ejdb/tcejdb/mxe

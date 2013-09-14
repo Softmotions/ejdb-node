@@ -18,14 +18,14 @@ sudo apt-get install g++ zlib1g zlib1g-dev
 
     npm install ejdb
 
-**[Installing EJDB NodeJS module on windows](https://github.com/Softmotions/ejdb/blob/master/tcejdb/WIN32.md#ejdb-nodejs-module-installation)**
+**[Installing EJDB NodeJS module on windows](#windows-ejdb-node-module-installation)**
 
 
 EJDB NodeJS samples
 ---------------------------------
 
-* [node/samples](https://github.com/Softmotions/ejdb/tree/master/node/samples)
-* [node/tests](https://github.com/Softmotions/ejdb/tree/master/node/tests)
+* [node/samples](https://github.com/Softmotions/ejdb-node/samples)
+* [node/tests](https://github.com/Softmotions/ejdb-node/tests)
 * [nwk-ejdb-address-book](https://github.com/Softmotions/nwk-ejdb-address-book)
 
 
@@ -488,3 +488,19 @@ Drop index of String|Number|Array type for JSON field path.
   * {Function} `[cb]` Optional callback function. Callback args: (error)
 
 -----------------------------------
+
+Windows EJDB Node module installation
+==================================
+
+To install nodejs ejdb binding you need:
+
+ * MSVC 2010 express edition
+ * Installed node v0.8.x or v0.10.x
+ * Manually installed `npm install adm-zip` package  (because it needed during installation process)
+
+ Then start MSVC cmd window and run:
+
+    npm install ejdb
+
+
+
