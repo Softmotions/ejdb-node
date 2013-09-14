@@ -1,10 +1,9 @@
-
-dummy:;
-
 all:
+	- mkdir -p var
 	npm build .
 
 clean:
-	rm -rf ./build
+	- $(MAKE) -C ./ejdb clean
+	rm -rf ./build ./var/*
 
 .PHONY:	 all clean dummy

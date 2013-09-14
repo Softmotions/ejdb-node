@@ -35,7 +35,7 @@ function nix() {
             fs.writeFileSync("configure.gypi", JSON.stringify(config));
 
             console.log("Building EJDB...");
-            var m = spawn("make", ["all"], {"stdio" : "inherit"});
+            var m = spawn("make", ["-C", "ejdb"], {"stdio" : "inherit"});
             m.on("close", exithandler("make all", function() {
                 var ng = spawn("node-gyp", ["rebuild"], {stdio : "inherit"});
                 ng.on("close", exithandler("node-gyp"));
@@ -45,7 +45,7 @@ function nix() {
         case "test":
         {
             console.log("Tesing Node EJDB...");
-            var m = spawn("make", ["-f", "tests.mk", "check-all"], {stdio : "inherit"});
+            var m = spawn("make", ["-f", "tests.mk", "check"], {stdio : "inherit"});
             m.on("close", exithandler("make"));
         }
     }

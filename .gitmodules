@@ -1,0 +1,3 @@
+[submodule "ejdb"]
+	path = ejdb
+	url = https://github.com/Softmotions/ejdb
