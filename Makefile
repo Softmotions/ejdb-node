@@ -4,6 +4,6 @@ all:
 
 clean:
 	- $(MAKE) -C ./ejdb clean
-	rm -rf ./build ./var/*
+	rm -rf ./build ./var/* *.tgz
 
 .PHONY:	 all clean dummy
