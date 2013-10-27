@@ -6,7 +6,7 @@ const maxInspectDepth = 10;
 var useColors = true;
 var quiet = false;
 var cmd = null;
-var pkg = require("../../package.json");
+var pkg = require("../package.json");
 
 
 //Parse aguments
