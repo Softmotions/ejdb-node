@@ -225,6 +225,8 @@ EJDB queries inspired by MongoDB (mongodb.org) and follows same philosophy.
            - {.., '$upsert' : {'field1' : val1, 'fieldN' : valN}}
         $inc Increment operation. Only number types are supported.
             - {.., '$inc' : {'field1' : number, ...,  'field1' : number}
+        $unset Field removal operation.
+            - {.., '$unset':{'fpath1':true,'fpathN':true}}
         $dropall In-place record removal operation.
             - {.., '$dropall' : true}
         $addToSet Atomically adds value to the array only if its not in the array already.
@@ -342,6 +344,8 @@ Convenient method to execute update queries.
     - {.., '$upsert' : {'field1' : val1, 'fieldN' : valN}}
  * `$inc` Increment operation. Only number types are supported.
     - {some fields for selection, '$inc' : {'field1' : number, ...,  'field1' : {number}}
+ * `$unset` In-place field removal operation.
+    - {.., '$unset':{'fpath1':true,'fpathN':true}}
  * `$dropall` In-place record removal operation.
     - {some fields for selection, '$dropall' : true}
  * `$addToSet` | `$addToSetAll` Atomically adds value to the array only if its not in the array already.
