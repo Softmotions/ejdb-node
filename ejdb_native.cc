@@ -510,7 +510,10 @@ namespace ejdb {
             cmdTxAbort = 9, //Abort collection transaction
             cmdTxCommit = 10, //Commit collection transaction
             cmdTxStatus = 11, //Get collection transaction status
-            cmdCmd = 12 //Execute EJDB command
+            cmdCmd = 12, //Execute EJDB command
+            cmdOpen = 13, //Open database
+            cmdClose = 14, //Close database
+            cmdEnsure = 15 //Ensure collection
         };
 
         struct BSONCmdData { //Any bson related cmd data
@@ -581,32 +584,36 @@ namespace ejdb {
             }
         };
 
+        struct OpenCmdData { //Open database command data
+            std::string path; //Path to database
+            int mode; //Open mode
+
+            OpenCmdData(const char *_path, int _mode) :
+            path(_path), mode(_mode) {
+            }
+        };
+
+        struct EnsureCmdData { //Ensure collection command data
+            std::string cname; //Name of collection
+            EJCOLLOPTS jcopts; //Collection options
+
+            EnsureCmdData(const char *_cname, EJCOLLOPTS _jcopts) :
+            cname(_cname), jcopts(_jcopts) {
+            }
+        };
+
         typedef EIOCmdTask<NodeEJDB> EJBTask; //Most generic task
         typedef EIOCmdTask<NodeEJDB, BSONCmdData> BSONCmdTask; //Any bson related task
         typedef EIOCmdTask<NodeEJDB, BSONQCmdData> BSONQCmdTask; //Query task
         typedef EIOCmdTask<NodeEJDB, RMCollCmdData> RMCollCmdTask; //Remove collection
         typedef EIOCmdTask<NodeEJDB, SetIndexCmdData> SetIndexCmdTask; //Set index command
         typedef EIOCmdTask<NodeEJDB, TxCmdData> TxCmdTask; //Transaction control command
+        typedef EIOCmdTask<NodeEJDB, OpenCmdData> OpenCmdTask; //Open db task
+        typedef EIOCmdTask<NodeEJDB, EnsureCmdData> EnsureCmdTask; //Ensure collection task
 
         static Persistent<FunctionTemplate> constructor_template;
 
         EJDB *m_jb;
-
-        static Handle<Value> s_new_object(const Arguments& args) {
-            HandleScope scope;
-            REQ_STR_ARG(0, dbPath);
-            REQ_INT32_ARG(1, mode);
-            NodeEJDB *njb = new NodeEJDB();
-            if (!njb->open(*dbPath, mode)) {
-                std::ostringstream os;
-                os << "Unable to open database: " << (*dbPath) << " error: " << njb->_jb_error_msg();
-                EJ_LOG_ERROR("%s", os.str().c_str());
-                delete njb;
-                return scope.Close(ThrowException(Exception::Error(String::New(os.str().c_str()))));
-            }
-            njb->Wrap(args.This());
-            return scope.Close(args.This());
-        }
 
         static void s_exec_cmd_eio(uv_work_t *req) {
             EJBTask *task = (EJBTask*) (req->data);
@@ -623,13 +630,46 @@ namespace ejdb {
             delete task;
         }
 
+        static Handle<Value> s_new_object(const Arguments& args) {
+            HandleScope scope;
+            NodeEJDB *njb = new NodeEJDB();
+            njb->Wrap(args.This());
+            return scope.Close(args.This());
+        }
+
+        static Handle<Value> s_open(const Arguments& args) {
+            HandleScope scope;
+            Local<Function> cb;
+            NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
+            REQ_STR_ARG(0, dbPath);
+            REQ_INT32_ARG(1, mode);
+            OpenCmdData *cmdata = new OpenCmdData(*dbPath, mode);
+            if (args[2]->IsFunction()) {
+                cb = Local<Function>::Cast(args[2]);
+                OpenCmdTask *task = new OpenCmdTask(cb, njb, cmdOpen, cmdata, OpenCmdTask::delete_val);
+                uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
+                return scope.Close(Undefined());
+            } else {
+                OpenCmdTask task(cb, njb, cmdOpen, cmdata, OpenCmdTask::delete_val);
+                njb->open(&task);
+                return scope.Close(njb->open_after(&task));
+            }
+        }
+
         static Handle<Value> s_close(const Arguments& args) {
             HandleScope scope;
+            Local<Function> cb;
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
-            if (!njb->close()) {
-                return scope.Close(ThrowException(Exception::Error(String::New(njb->_jb_error_msg()))));
+            if (args[0]->IsFunction()) {
+                cb = Local<Function>::Cast(args[0]);
+                EJBTask *task = new EJBTask(cb, njb, cmdClose, NULL, NULL);
+                uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
+                return scope.Close(Undefined());
+            } else {
+                EJBTask task(cb, njb, cmdClose, NULL, NULL);
+                njb->close(&task);
+                return scope.Close(njb->close_after(&task));
             }
-            return scope.Close(Undefined());
         }
 
         static Handle<Value> s_load(const Arguments& args) {
@@ -932,23 +972,35 @@ namespace ejdb {
 
         static Handle<Value> s_ensure_collection(const Arguments& args) {
             HandleScope scope;
+            Local<Function> cb;
+            NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             REQ_STR_ARG(0, cname);
             REQ_OBJ_ARG(1, copts);
-            NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
-            if (!ejdbisopen(njb->m_jb)) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Operation on closed EJDB instance"))));
-            }
             EJCOLLOPTS jcopts;
             memset(&jcopts, 0, sizeof (jcopts));
             jcopts.cachedrecords = (int) fetch_int_data(copts->Get(sym_cachedrecords), NULL, 0);
             jcopts.compressed = fetch_bool_data(copts->Get(sym_compressed), NULL, false);
             jcopts.large = fetch_bool_data(copts->Get(sym_large), NULL, false);
             jcopts.records = fetch_int_data(copts->Get(sym_records), NULL, 0);
+            EnsureCmdData *cmdata = new EnsureCmdData(*cname, jcopts);
+            if (args[2]->IsFunction()) {
+                cb = Local<Function>::Cast(args[2]);
+                EnsureCmdTask *task = new EnsureCmdTask(cb, njb, cmdEnsure, cmdata, EnsureCmdTask::delete_val);
+                uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
+                return scope.Close(Undefined());
+            } else {
+                EnsureCmdTask task(cb, njb, cmdEnsure, cmdata, EnsureCmdTask::delete_val);
+                njb->ensure(&task);
+                return scope.Close(njb->ensure_after(&task));
+            }
+
+            if (!ejdbisopen(njb->m_jb)) {
+                return scope.Close(ThrowException(Exception::Error(String::New("Operation on closed EJDB instance"))));
+            }
             EJCOLL *coll = ejdbcreatecoll(njb->m_jb, *cname, &jcopts);
             if (!coll) {
                 return scope.Close(ThrowException(Exception::Error(String::New(njb->_jb_error_msg()))));
             }
-            return scope.Close(Undefined());
         }
 
         static Handle<Value> s_rm_collection(const Arguments& args) {
@@ -1010,6 +1062,15 @@ namespace ejdb {
                 case cmdCmd:
                     ejdbcmd((BSONQCmdTask*) task);
                     break;
+                case cmdOpen:
+                    open((OpenCmdTask*) task);
+                    break;
+                case cmdClose:
+                    close(task);
+                    break;
+                case cmdEnsure:
+                    ensure((EnsureCmdTask*) task);
+                    break;
                 default:
                     assert(0);
             }
@@ -1047,6 +1108,15 @@ namespace ejdb {
                     break;
                 case cmdCmd:
                     ejdbcmd_after((BSONQCmdTask*) task);
+                    break;
+                case cmdOpen:
+                    open_after((OpenCmdTask*) task);
+                    break;
+                case cmdClose:
+                    close_after(task);
+                    break;
+                case cmdEnsure:
+                    ensure_after((EnsureCmdTask*) task);
                     break;
                 default:
                     assert(0);
@@ -1454,23 +1524,122 @@ finish:
 
         Handle<Value> query_after(BSONQCmdTask *task);
 
-        bool open(const char* dbpath, int mode) {
-            m_jb = ejdbnew();
-            if (!m_jb) {
-                return false;
+        void open(OpenCmdTask *task) {
+            OpenCmdData *cmdata = task->cmd_data;
+            assert(cmdata);
+
+            if (m_jb && ejdbisopen(m_jb)) {
+                task->cmd_ret = CMD_RET_ERROR;
+                task->cmd_ret_msg = "Database already opened";
+                return;
             }
-            return ejdbopen(m_jb, dbpath, mode);
+            if (!m_jb)
+                m_jb = ejdbnew();
+            if (!m_jb || !ejdbopen(m_jb, cmdata->path.c_str(), cmdata->mode)) {
+                std::ostringstream os;
+                os << "Unable to open database: " << (cmdata->path) << " error: " << _jb_error_msg();
+                EJ_LOG_ERROR("%s", os.str().c_str());
+                task->cmd_ret_msg = os.str();
+                task->cmd_ret = CMD_RET_ERROR;
+                ejdbdel(m_jb);
+                m_jb = NULL;
+            }
         }
 
-        bool close() {
+        Handle<Value> open_after(OpenCmdTask *task) {
+            HandleScope scope;
+            Local<Value> argv[1];
+            bool sync = task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined();
+
+            if (task->cmd_ret != 0) {
+                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                if (sync)
+                    return scope.Close(ThrowException(argv[0]));
+            } else {
+                argv[0] = Local<Primitive>::New(Null());
+                if (sync)
+                    return scope.Close(Undefined());
+            }
+            TryCatch try_catch;
+            task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+            if (try_catch.HasCaught()) {
+                FatalException(try_catch);
+            }
+            return scope.Close(Undefined());
+        }
+
+        void close(EJBTask *task) {
+            if (!_check_state((EJBTask*) task)) {
+                return;
+            }
             if (m_jb) {
                 bool rv = ejdbclose(m_jb);
                 ejdbdel(m_jb);
                 m_jb = NULL;
-                return rv;
-            } else {
-                return false;
+                if (!rv) {
+                    task->cmd_ret = CMD_RET_ERROR;
+                    task->cmd_ret_msg = std::string(_jb_error_msg());
+                }
+                return;
             }
+        }
+
+        Handle<Value> close_after(EJBTask *task) {
+            HandleScope scope;
+            Local<Value> argv[1];
+            bool sync = task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined();
+
+            if (task->cmd_ret != 0) {
+                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                if (sync)
+                    return scope.Close(ThrowException(argv[0]));
+            } else {
+                argv[0] = Local<Primitive>::New(Null());
+                if (sync)
+                    return scope.Close(Undefined());
+            }
+            TryCatch try_catch;
+            task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+            if (try_catch.HasCaught()) {
+                FatalException(try_catch);
+            }
+            return scope.Close(Undefined());
+        }
+
+        void ensure(EnsureCmdTask *task) {
+            EnsureCmdData *cmdata = task->cmd_data;
+            assert(cmdata);
+            if (!_check_state((EJBTask*) task)) {
+                return;
+            }
+            EJCOLL *coll = ejdbcreatecoll(m_jb, cmdata->cname.c_str(), &cmdata->jcopts);
+            if (!coll) {
+                task->cmd_ret = CMD_RET_ERROR;
+                task->cmd_ret_msg = _jb_error_msg();
+                return;
+            }
+        }
+
+        Handle<Value> ensure_after(EnsureCmdTask *task) {
+            HandleScope scope;
+            Local<Value> argv[1];
+            bool sync = task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined();
+
+            if (task->cmd_ret != 0) {
+                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                if (sync)
+                    return scope.Close(ThrowException(argv[0]));
+            } else {
+                argv[0] = Local<Primitive>::New(Null());
+                if (sync)
+                    return scope.Close(Undefined());
+            }
+            TryCatch try_catch;
+            task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+            if (try_catch.HasCaught()) {
+                FatalException(try_catch);
+            }
+            return scope.Close(Undefined());
         }
 
         const char* _jb_error_msg() {
@@ -1545,6 +1714,7 @@ finish:
             //Misc
             NODE_DEFINE_CONSTANT(target, JBQRYCOUNT);
 
+            NODE_SET_PROTOTYPE_METHOD(constructor_template, "open", s_open);
             NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", s_close);
             NODE_SET_PROTOTYPE_METHOD(constructor_template, "save", s_save);
             NODE_SET_PROTOTYPE_METHOD(constructor_template, "load", s_load);
