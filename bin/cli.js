@@ -53,13 +53,13 @@ var clinspect = require("../clinspect.js");
 
 //Init help hints
 Object.defineProperty(EJDB.open, "_help_",
-        {value : "(dbFile, [openMode]) Open database"});
+        {value : "(dbFile, [openMode], [cb]) Open database"});
 Object.defineProperty(EJDB.prototype.close, "_help_",
-        {value : "Close database"});
+        {value : "([cb]) Close database"});
 Object.defineProperty(EJDB.prototype.isOpen, "_help_",
         {value : "Check if database in opened state"});
 Object.defineProperty(EJDB.prototype.ensureCollection, "_help_",
-        {value : "(cname, [copts]) Creates new collection if it does't exists"});
+        {value : "(cname, [copts], [cb]) Creates new collection if it does't exists"});
 Object.defineProperty(EJDB.prototype.dropCollection, "_help_",
         {value : "(cname, [prune], [cb]) Drop collection, " +
                 "if `prune` is true collection db files will be erased from disk."});
