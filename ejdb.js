@@ -24,9 +24,9 @@ try {
 var EJDBImpl = ejdblib.NodeEJDB;
 
 const DEFAULT_OPEN_MODE = (ejdblib.JBOWRITER | ejdblib.JBOCREAT);
-var EJDB = function(dbFile, openMode) {
+var EJDB = function() {
     Object.defineProperty(this, "_impl", {
-        value : new EJDBImpl(dbFile, (openMode > 0) ? openMode : DEFAULT_OPEN_MODE),
+        value : new EJDBImpl(),
         configurable : false,
         enumerable : false,
         writable : false
@@ -47,7 +47,8 @@ EJDB.DEFAULT_OPEN_MODE = DEFAULT_OPEN_MODE;
  *
  * Default open mode: JBOWRITER | JBOCREAT
  *
- * This is blocking function.
+ * Depending on if cb parameter is passed this function is either async or
+ * blocking.
  *
  * @param {String} dbFile Database main file name
  * @param {Number} openMode [JBOWRITER | JBOCREAT | ..] Bitmast of open modes:
@@ -55,11 +56,22 @@ EJDB.DEFAULT_OPEN_MODE = DEFAULT_OPEN_MODE;
  *      - `JBOWRITER` Open as a writer.
  *      - `JBOCREAT` Create db if it not exists
  *      - `JBOTRUNC` Truncate db.
+ * @param {Function} [cb] Callback called with error and EJDB object arguments.
  * @returns {EJDB} EJDB database wrapper
  */
 
-EJDB.open = function(dbFile, openMode) {
-    return new EJDB(dbFile, openMode);
+EJDB.open = function(dbFile, openMode, cb) {
+    var db = new EJDB();
+    var mode = (openMode > 0) ? openMode : DEFAULT_OPEN_MODE;
+
+    if (cb) {
+        db._impl.open(dbFile, mode, function (err) {
+            cb(err, db);
+        });
+        return;
+    }
+    db._impl.open(dbFile, mode);
+    return db;
 };
 
 
@@ -84,10 +96,13 @@ EJDB.isValidOID = function(oid) {
  * Close database.
  * If database was not opened it does nothing.
  *
- * This is blocking function.
+ * Depending on if cb parameter is passed this function is either async or
+ * blocking.
+ *
+ * @param {Function} [cb] Callback called with error argument.
  */
-EJDB.prototype.close = function() {
-    return this._impl.close();
+EJDB.prototype.close = function(cb) {
+    return this._impl.close(cb);
 };
 
 /**
@@ -111,14 +126,20 @@ EJDB.prototype.isOpen = function() {
  *      "compressed" : If true collection records will be compressed with DEFLATE compression. Default: false.
  *  }
  *
- * This is blocking function.
+ * Depending on if cb parameter is passed this function is either async or
+ * blocking.
  *
  * @param {String} cname Name of collection.
  * @param {Object} [copts] Collection options.
+ * @param {Function} [cb] Callback called with error argument.
  * @return {*}
  */
-EJDB.prototype.ensureCollection = function(cname, copts) {
-    return this._impl.ensureCollection(cname, copts || {});
+EJDB.prototype.ensureCollection = function(cname, copts, cb) {
+    if (arguments.length === 2 && typeof copts === 'function') {
+        cb = copts;
+        copts = {};
+    }
+    return this._impl.ensureCollection(cname, copts || {}, cb);
 };
 
 
