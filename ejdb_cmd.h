@@ -22,6 +22,7 @@
 #include <string>
 
 
+class Persistent;
 namespace ejdb {
 
     template < typename T, typename D = void > class EIOCmdTask {
@@ -30,7 +31,7 @@ namespace ejdb {
         //uv request
         uv_work_t uv_work;
 
-        v8::Persistent<v8::Function> cb;
+        v8::Eternal<v8::Function> cb;
         T* wrapped;
 
         //cmd spec
@@ -71,14 +72,15 @@ namespace ejdb {
                 D* _cmd_data, void (*_free_cmd_data)(EIOCmdTask<T, D>*)) :
         wrapped(_wrapped), cmd(_cmd), cmd_data(_cmd_data), cmd_ret(0), cmd_ret_data_length(0), entity(0) {
 
+            // TODO: check
             this->free_cmd_data = _free_cmd_data;
-            this->cb = v8::Persistent<v8::Function>::New(_cb);
+            this->cb = v8::Eternal<v8::Function>(v8::Isolate::GetCurrent(), _cb);
             this->wrapped->Ref();
             this->uv_work.data = this;
         }
 
         virtual ~EIOCmdTask() {
-            this->cb.Dispose();
+            this->cb = v8::Eternal<v8::Function>();
             this->wrapped->Unref();
             if (this->free_cmd_data) {
                 this->free_cmd_data(this);
