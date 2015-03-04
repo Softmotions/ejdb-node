@@ -24,7 +24,6 @@
 #include <nan.h>
 
 
-class Persistent;
 namespace ejdb {
 
     template < typename T, typename D = void > class EIOCmdTask {
@@ -82,7 +81,6 @@ namespace ejdb {
         }
 
         virtual ~EIOCmdTask() {
-//            this->cb;// = v8::Eternal<v8::Function>();
             delete this->cb;
             this->wrapped->Unref();
             if (this->free_cmd_data) {

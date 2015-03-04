@@ -1129,7 +1129,7 @@ namespace ejdb {
         void sync_after(EJBTask *task) {
             NanScope();
             Local<Value> argv[1];
-            if (task->cb->IsEmpty()/*|| task->cb->GetFunction()->IsNull() || task->cb->GetFunction()->IsUndefined()*/) {
+            if (task->cb->IsEmpty()/*|| task->cb->IsNull() || task->cb->IsUndefined()*/) {
                 return;
             }
             if (task->cmd_ret != 0) {
@@ -1679,8 +1679,6 @@ finish:
             NanScope();
 
             //Symbols
-            // TODO: constants
-            
             #define NODE_PSYMBOL(V) Eternal<String>(Isolate::GetCurrent(), NanNew<String>(V))
             
             sym_large = NODE_PSYMBOL("large");
@@ -1703,7 +1701,6 @@ finish:
 
 
             Local<FunctionTemplate> t = NanNew<FunctionTemplate>(s_new_object);
-//            constructor_template = Persistent<FunctionTemplate>::New(t);
             t->InstanceTemplate()->SetInternalFieldCount(1);
             t->SetClassName(NanNew<String>("NodeEJDB"));
 
@@ -1749,8 +1746,6 @@ finish:
             target->Set(NanNew<String>("NodeEJDB"), t->GetFunction());
             
             NanAssignPersistent(constructor_template, t);
-//            constructor_template.Dispose();
-//            constructor_template = Pesistent<FunctionTemplate>::New(t);
         }
 
         void Ref() {
@@ -1959,7 +1954,6 @@ finish:
             NanScope();
 
             Local<FunctionTemplate> t = NanNew<FunctionTemplate>(s_new_object);
-//            constructor_template = Persistent<FunctionTemplate>::New(t);
             t->InstanceTemplate()->SetInternalFieldCount(1);
             t->SetClassName(NanNew<String>("NodeEJDBCursor"));
 
@@ -1984,9 +1978,6 @@ finish:
             ObjectWrap::Unref();
         }
     };
-
-//    static Persistent<FunctionTemplate> NodeEJDB::constructor_template;
-//    static Persistent<FunctionTemplate> NodeEJDBCursor::constructor_template;
 
     ///////////////////////////////////////////////////////////////////////////
     //                           rest                                        //
@@ -2019,7 +2010,7 @@ finish:
             Local<Value> cursorArgv[2];
             cursorArgv[0] = NanNew(task->wrapped);
             cursorArgv[1] = NanNew(res);
-            Local<Value> cursor(NodeEJDBCursor::constructor_template->GetFunction()->NewInstance(2, cursorArgv));
+            Local<Value> cursor(NanNew(NodeEJDBCursor::constructor_template)->GetFunction()->NewInstance(2, cursorArgv));
             argv[1] = cursor;
         } else { //this is update query so no result set
             argv[1] = NanNull();
