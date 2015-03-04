@@ -27,52 +27,44 @@
 
 #define REQ_ARGS(N)                                                                       \
   if (args.Length() < (N))                                                                \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-                 String::NewFromUtf8(isolate, "Expected " #N " arguments")));
+    return NanThrowError("Expected " #N " arguments");
 
 #define REQ_STR_ARG(I, VAR)                                                               \
   if (args.Length() <= (I) || !args[I]->IsString())                                       \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-                  String::NewFromUtf8(isolate, "Argument " #I " must be a string")));     \
+    return NanThrowTypeError("Argument " #I " must be a string");     \
   String::Utf8Value VAR(args[I]->ToString());
 
 #define REQ_STRW_ARG(I, VAR)                                                              \
   if (args.Length() <= (I) || !args[I]->IsString())                                       \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-                  String::NewFromUtf8(isolate, "Argument " #I " must be a string")));     \
+    return NanThrowTypeError("Argument " #I " must be a string");     \
   String::Value VAR(args[I]->ToString());
 
 
 #define REQ_FUN_ARG(I, VAR)                                                               \
   if (args.Length() <= (I) || !args[I]->IsFunction())                                     \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-                  String::NewFromUtf8(isolate, "Argument " #I " must be a function")));   \
+    return NanThrowTypeError("Argument " #I " must be a function");   \
   Local<Function> VAR = Local<Function>::Cast(args[I]);
 
 #define REQ_OBJ_ARG(I, VAR)                                                               \
   if (args.Length() <= (I) || !args[I]->IsObject())                                       \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-                  String::NewFromUtf8(isolate, "Argument " #I " must be a object")));     \
+    return NanThrowTypeError("Argument " #I " must be a object");     \
   Local<Object> VAR = Local<Object>::Cast(args[I]);
 
 #define REQ_VAL_ARG(I, VAR)                                                               \
   if (args.Length() <= (I))												                  \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-                  String::NewFromUtf8(isolate, "Argument " #I " must be a provided")));   \
+    return NanThrowTypeError("Argument " #I " must be a provided");   \
   Local<Value> VAR = args[I];
 
 
 #define REQ_ARR_ARG(I, VAR)                                                               \
   if (args.Length() <= (I) || !args[I]->IsArray())                                        \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-                  String::NewFromUtf8(isolate, "Argument " #I " must be an array")));     \
+    return NanThrowTypeError("Argument " #I " must be an array");     \
   Local<Array> VAR = Local<Array>::Cast(args[I]);
 
 
 #define REQ_EXT_ARG(I, VAR)                                                               \
   if (args.Length() <= (I) || !args[I]->IsExternal())                                     \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-                  String::NewFromUtf8(isolate, "Argument " #I " invalid")));              \
+    return NanThrowTypeError("Argument " #I " invalid");              \
   Local<External> VAR = Local<External>::Cast(args[I]);
 
 #define OPT_INT_ARG(I, VAR, DEFAULT)                                                      \
@@ -82,36 +74,31 @@
   } else if (args[I]->IsInt32()) {                                                        \
     VAR = args[I]->Int32Value();                                                          \
   } else {                                                                                \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-              String::NewFromUtf8(isolate, "Argument " #I " must be an integer")));       \
+    return NanThrowTypeError("Argument " #I " must be an integer");       \
   }
 
 #define REQ_INT32_ARG(I, VAR)                                                             \
   if (args.Length() <= (I) || !args[I]->IsInt32())                                        \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-               String::NewFromUtf8(isolate, "Argument " #I " must be an integer")));      \
+    return NanThrowTypeError("Argument " #I " must be an integer");      \
   int32_t VAR = args[I]->Int32Value();
 
 
 #define REQ_INT64_ARG(I, VAR)                                                             \
   if (args.Length() <= (I) || !args[I]->IsNumber())                                       \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-               String::NewFromUtf8(isolate, "Argument " #I " must be an number")));       \
+    return NanThrowTypeError("Argument " #I " must be an number");       \
   int64_t VAR = args[I]->IntegerValue();
 
 
 
 #define REQ_NUM_ARG(I, VAR)                                                               \
   if (args.Length() <= (I) || !args[I]->IsNumber())                                       \
-    return isolate->ThrowException(Exception::TypeError(                                  \
-               String::NewFromUtf8(isolate, "Argument " #I " must be an number")));       \
+    return NanThrowTypeError("Argument " #I " must be an number");       \
   double VAR = args[I]->ToNumber()->Value();
 
 
 #define REQ_BUFF_ARG(I, VAR)                                                              \
   if (!Buffer::HasInstance(args[I])) {                                                    \
-     return isolate->ThrowException(Exception::Error(                                     \
-                String::NewFromUtf8(isolate, "Argument " #I " must to be a buffer")));    \
+     return NanThrowTypeError("Argument " #I " must to be a buffer");    \
   }                                                                                       \
   Buffer* VAR = ObjectWrap::Unwrap<Buffer>(args[I]->ToObject());
 

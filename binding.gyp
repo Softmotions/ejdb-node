@@ -67,7 +67,7 @@
                 }
            }]
         ],
-        'include_dirs' : ['ejdb/tcejdb'],
+        'include_dirs' : ['ejdb/tcejdb', '<!(node -e "require(\'nan\')")'],
     },
 
     'targets' : [

@@ -21,6 +21,8 @@
 #include <v8.h>
 #include <string>
 
+#include <nan.h>
+
 
 class Persistent;
 namespace ejdb {
@@ -31,7 +33,7 @@ namespace ejdb {
         //uv request
         uv_work_t uv_work;
 
-        v8::Eternal<v8::Function> cb;
+        NanCallback *cb;
         T* wrapped;
 
         //cmd spec
@@ -74,13 +76,14 @@ namespace ejdb {
 
             // TODO: check
             this->free_cmd_data = _free_cmd_data;
-            this->cb = v8::Eternal<v8::Function>(v8::Isolate::GetCurrent(), _cb);
+            this->cb = new NanCallback(_cb);
             this->wrapped->Ref();
             this->uv_work.data = this;
         }
 
         virtual ~EIOCmdTask() {
-            this->cb = v8::Eternal<v8::Function>();
+//            this->cb;// = v8::Eternal<v8::Function>();
+            delete this->cb;
             this->wrapped->Unref();
             if (this->free_cmd_data) {
                 this->free_cmd_data(this);
