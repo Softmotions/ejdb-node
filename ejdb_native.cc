@@ -38,6 +38,8 @@
 #include <ext/hash_set>
 #ifdef __GNUC__
 
+#include <iostream>
+
 using namespace __gnu_cxx;
 #endif
 #endif
@@ -830,7 +832,7 @@ namespace ejdb {
                 }
                 cmdata->bsons.push_back(bs);
             }
-
+            
             if (len > 1 && qarr->Get(len - 1)->IsObject()) {
                 Local<Object> hints = Local<Object>::Cast(qarr->Get(len - 1));
                 if (hints->Get(sym_explain.Get(Isolate::GetCurrent()))->BooleanValue()) {
@@ -2008,8 +2010,8 @@ finish:
         if (res) {
             cmdata->res = NULL; //res will be freed by NodeEJDBCursor instead of ~BSONQCmdData()
             Local<Value> cursorArgv[2];
-            cursorArgv[0] = NanNew(task->wrapped);
-            cursorArgv[1] = NanNew(res);
+            cursorArgv[0] = NanNew<External>(task->wrapped);
+            cursorArgv[1] = NanNew<External>(res);
             Local<Value> cursor(NanNew(NodeEJDBCursor::constructor_template)->GetFunction()->NewInstance(2, cursorArgv));
             argv[1] = cursor;
         } else { //this is update query so no result set
@@ -2019,6 +2021,7 @@ finish:
         if (cmdata->log) {
             argv[3] = NanNew<String>((const char*) tcxstrptr(cmdata->log));
         }
+        
         if (task->cb->IsEmpty()) {// || task->cb->IsNull() || task->cb->IsUndefined()) {
             if (res) {
                 return NanEscapeScope(argv[1]); //cursor
@@ -2042,6 +2045,9 @@ finish:
         ejdb::NodeEJDB::Init(target);
         ejdb::NodeEJDBCursor::Init(target);
 }
+
+Persistent<FunctionTemplate> NodeEJDB::constructor_template;
+Persistent<FunctionTemplate> NodeEJDBCursor::constructor_template;
 
 }
 

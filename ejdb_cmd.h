@@ -23,7 +23,6 @@
 
 #include <nan.h>
 
-
 namespace ejdb {
 
     template < typename T, typename D = void > class EIOCmdTask {
@@ -73,9 +72,11 @@ namespace ejdb {
                 D* _cmd_data, void (*_free_cmd_data)(EIOCmdTask<T, D>*)) :
         wrapped(_wrapped), cmd(_cmd), cmd_data(_cmd_data), cmd_ret(0), cmd_ret_data_length(0), entity(0) {
 
-            // TODO: check
             this->free_cmd_data = _free_cmd_data;
-            this->cb = new NanCallback(_cb);
+            this->cb = new NanCallback();
+            if (!(_cb.IsEmpty() || _cb->IsNull() || _cb->IsUndefined())) {
+                this->cb->SetFunction(_cb);
+            }
             this->wrapped->Ref();
             this->uv_work.data = this;
         }
