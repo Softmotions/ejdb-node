@@ -38,8 +38,6 @@
 #include <ext/hash_set>
 #ifdef __GNUC__
 
-#include <iostream>
-
 using namespace __gnu_cxx;
 #endif
 #endif
@@ -208,8 +206,8 @@ namespace ejdb {
             case BSON_ARRAY:
             {
                 bson_iterator nit;
-                bson_iterator_subiterator(it, &nit);
-                return toV8Object(&nit, bt);
+                bson_iterator_subiterator(it, &nit);    
+                return NanEscapeScope(toV8Object(&nit, bt));
             }
             case BSON_DATE:
                 return NanEscapeScope(NanNew<Date>((double) bson_iterator_date(it)));
@@ -1131,7 +1129,7 @@ namespace ejdb {
         void sync_after(EJBTask *task) {
             NanScope();
             Local<Value> argv[1];
-            if (task->cb->IsEmpty()/*|| task->cb->IsNull() || task->cb->IsUndefined()*/) {
+            if (task->cb->IsEmpty()) {
                 return;
             }
             if (task->cmd_ret != 0) {
@@ -1168,7 +1166,7 @@ namespace ejdb {
         void set_index_after(SetIndexCmdTask *task) {
             NanScope();
             Local<Value> argv[1];
-            if (task->cb->IsEmpty()/* || task->cb->IsNull() || task->cb->IsUndefined()*/) {
+            if (task->cb->IsEmpty()) {
                 return;
             }
             if (task->cmd_ret != 0) {
@@ -1236,7 +1234,7 @@ namespace ejdb {
             } else {
                 argv[0] = NanNull();
             }
-            if (task->cb->IsEmpty()/* || task->cb->IsNull() || task->cb->IsUndefined()*/) {
+            if (task->cb->IsEmpty()) {
                 if (task->cmd_ret != 0) {
                     NanThrowError(argv[0]);
                     return NanUndefined();
@@ -1302,7 +1300,7 @@ namespace ejdb {
                     args = 2;
                 }
             }
-            if (task->cb->IsEmpty()/* || task->cb->IsNull() || task->cb->IsUndefined()*/) {
+            if (task->cb->IsEmpty()) {
                 if (task->cmd_ret != 0) {
                     NanThrowError(argv[0]);
                     return NanUndefined();
@@ -1376,7 +1374,7 @@ namespace ejdb {
                 }
             }
             argv[1] = oids;
-            if (task->cb->IsEmpty()/* || task->cb->IsNull() || task->cb->IsUndefined()*/) {
+            if (task->cb->IsEmpty()) {
                 if (task->cmd_ret != 0) {
                     NanThrowError(argv[0]);
                     return NanUndefined();
@@ -1425,7 +1423,7 @@ namespace ejdb {
             } else {
                 argv[1] = NanNull();
             }
-            if (task->cb->IsEmpty()/* || task->cb->IsNull() || task->cb->IsUndefined()*/) {
+            if (task->cb->IsEmpty()) {
                 if (task->cmd_ret != 0) {
                     NanThrowError(argv[0]); 
                     return NanUndefined();
@@ -1554,7 +1552,7 @@ finish:
         Handle<Value> open_after(OpenCmdTask *task) {
             NanEscapableScope();
             Local<Value> argv[1];
-            bool sync = task->cb->IsEmpty();// || task->cb->IsNull() || task->cb->IsUndefined();
+            bool sync = task->cb->IsEmpty();
 
             if (task->cmd_ret != 0) {
                 argv[0] = NanError(task->cmd_ret_msg.c_str());
@@ -1594,7 +1592,7 @@ finish:
         Handle<Value> close_after(EJBTask *task) {
             NanEscapableScope();
             Local<Value> argv[1];
-            bool sync = task->cb->IsEmpty();// || task->cb->IsNull() || task->cb->IsUndefined();
+            bool sync = task->cb->IsEmpty();
 
             if (task->cmd_ret != 0) {
                 argv[0] = NanError(task->cmd_ret_msg.c_str());
@@ -1632,7 +1630,7 @@ finish:
         Handle<Value> ensure_after(EnsureCmdTask *task) {
             NanEscapableScope();
             Local<Value> argv[1];
-            bool sync = task->cb->IsEmpty();// || task->cb->IsNull() || task->cb->IsUndefined();
+            bool sync = task->cb->IsEmpty();
 
             if (task->cmd_ret != 0) {
                 argv[0] = NanError(task->cmd_ret_msg.c_str());
@@ -1992,7 +1990,7 @@ finish:
 
         Local<Value> argv[4];
         if (task->cmd_ret != 0) { //error case
-            if (task->cb->IsEmpty()/* || task->cb->IsNull() || task->cb->IsUndefined()*/) {
+            if (task->cb->IsEmpty()) {
                 NanThrowError(task->cmd_ret_msg.c_str());
                 return NanUndefined();
             } else {
@@ -2022,7 +2020,7 @@ finish:
             argv[3] = NanNew<String>((const char*) tcxstrptr(cmdata->log));
         }
         
-        if (task->cb->IsEmpty()) {// || task->cb->IsNull() || task->cb->IsUndefined()) {
+        if (task->cb->IsEmpty()) {
             if (res) {
                 return NanEscapeScope(argv[1]); //cursor
             } else {
