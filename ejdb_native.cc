@@ -58,21 +58,21 @@ namespace ejdb {
     //                           Some symbols                                //
     ///////////////////////////////////////////////////////////////////////////
 
-    static Eternal<String> sym_large;
-    static Eternal<String> sym_compressed;
-    static Eternal<String> sym_records;
-    static Eternal<String> sym_cachedrecords;
-    static Eternal<String> sym_explain;
-    static Eternal<String> sym_merge;
+    static Persistent<String> sym_large;
+    static Persistent<String> sym_compressed;
+    static Persistent<String> sym_records;
+    static Persistent<String> sym_cachedrecords;
+    static Persistent<String> sym_explain;
+    static Persistent<String> sym_merge;
 
-    static Eternal<String> sym_name;
-    static Eternal<String> sym_iname;
-    static Eternal<String> sym_field;
-    static Eternal<String> sym_indexes;
-    static Eternal<String> sym_options;
-    static Eternal<String> sym_file;
-    static Eternal<String> sym_buckets;
-    static Eternal<String> sym_type;
+    static Persistent<String> sym_name;
+    static Persistent<String> sym_iname;
+    static Persistent<String> sym_field;
+    static Persistent<String> sym_indexes;
+    static Persistent<String> sym_options;
+    static Persistent<String> sym_file;
+    static Persistent<String> sym_buckets;
+    static Persistent<String> sym_type;
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -748,7 +748,7 @@ namespace ejdb {
                 bson_finish(bs);
                 cmdata->bsons.push_back(bs);
             }
-            if (opts->Get(sym_merge.Get(Isolate::GetCurrent()))->BooleanValue()) {
+            if (opts->Get(NanNew(sym_merge))->BooleanValue()) {
                 cmdata->merge = true;
             }
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
@@ -833,7 +833,7 @@ namespace ejdb {
             
             if (len > 1 && qarr->Get(len - 1)->IsObject()) {
                 Local<Object> hints = Local<Object>::Cast(qarr->Get(len - 1));
-                if (hints->Get(sym_explain.Get(Isolate::GetCurrent()))->BooleanValue()) {
+                if (hints->Get(NanNew(sym_explain))->BooleanValue()) {
                     cmdata->log = tcxstrnew();
                 }
             }
@@ -971,10 +971,10 @@ namespace ejdb {
             memset(&jcopts, 0, sizeof (jcopts));
             
             // TODO: constants
-            jcopts.cachedrecords = (int) fetch_int_data(copts->Get(sym_cachedrecords.Get(Isolate::GetCurrent())), NULL, 0);
-            jcopts.compressed = fetch_bool_data(copts->Get(sym_compressed.Get(Isolate::GetCurrent())), NULL, false);
-            jcopts.large = fetch_bool_data(copts->Get(sym_large.Get(Isolate::GetCurrent())), NULL, false);
-            jcopts.records = fetch_int_data(copts->Get(sym_records.Get(Isolate::GetCurrent())), NULL, 0);
+            jcopts.cachedrecords = (int) fetch_int_data(copts->Get(NanNew(sym_cachedrecords)), NULL, 0);
+            jcopts.compressed = fetch_bool_data(copts->Get(NanNew(sym_compressed)), NULL, false);
+            jcopts.large = fetch_bool_data(copts->Get(NanNew(sym_large)), NULL, false);
+            jcopts.records = fetch_int_data(copts->Get(NanNew(sym_records)), NULL, 0);
             EnsureCmdData *cmdata = new EnsureCmdData(*cname, jcopts);
             if (args[2]->IsFunction()) {
                 cb = Local<Function>::Cast(args[2]);
@@ -1679,25 +1679,21 @@ finish:
             NanScope();
 
             //Symbols
-            #define NODE_PSYMBOL(V) Eternal<String>(Isolate::GetCurrent(), NanNew<String>(V))
-            
-            sym_large = NODE_PSYMBOL("large");
-            sym_compressed = NODE_PSYMBOL("compressed");
-            sym_records = NODE_PSYMBOL("records");
-            sym_cachedrecords = NODE_PSYMBOL("cachedrecords");
-            sym_explain = NODE_PSYMBOL("$explain");
-            sym_merge = NODE_PSYMBOL("$merge");
+            NanAssignPersistent(sym_large, NanNew<String>("large"));
+            NanAssignPersistent(sym_compressed, NanNew<String>("compressed"));
+            NanAssignPersistent(sym_records, NanNew<String>("records"));
+            NanAssignPersistent(sym_cachedrecords, NanNew<String>("cachedrecords"));
+            NanAssignPersistent(sym_explain, NanNew<String>("$explain"));
+            NanAssignPersistent(sym_merge, NanNew<String>("$merge"));
 
-            sym_name = NODE_PSYMBOL("name");
-            sym_iname = NODE_PSYMBOL("iname");
-            sym_field = NODE_PSYMBOL("field");
-            sym_indexes = NODE_PSYMBOL("indexes");
-            sym_options = NODE_PSYMBOL("options");
-            sym_file = NODE_PSYMBOL("file");
-            sym_buckets = NODE_PSYMBOL("buckets");
-            sym_type = NODE_PSYMBOL("type");
-
-            #undef NODE_PSYMBOL
+            NanAssignPersistent(sym_name, NanNew<String>("name"));
+            NanAssignPersistent(sym_iname, NanNew<String>("iname"));
+            NanAssignPersistent(sym_field, NanNew<String>("field"));
+            NanAssignPersistent(sym_indexes, NanNew<String>("indexes"));
+            NanAssignPersistent(sym_options, NanNew<String>("options"));
+            NanAssignPersistent(sym_file, NanNew<String>("file"));
+            NanAssignPersistent(sym_buckets, NanNew<String>("buckets"));
+            NanAssignPersistent(sym_type, NanNew<String>("type"));
 
 
             Local<FunctionTemplate> t = NanNew<FunctionTemplate>(s_new_object);
