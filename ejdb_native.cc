@@ -672,7 +672,7 @@ namespace ejdb {
             REQ_STR_ARG(0, cname); //Collection name
             REQ_STR_ARG(1, soid); //String OID
             if (!ejdbisvalidoidstr(*soid)) {
-                return NanThrowError("Argument 2: Invalid OID string");
+                return NanThrowError(NanError("Argument 2: Invalid OID string"));
             }
             Local<Function> cb;
             bson_oid_t oid;
@@ -699,7 +699,7 @@ namespace ejdb {
             REQ_STR_ARG(0, cname); //Collection name
             REQ_STR_ARG(1, soid); //String OID
             if (!ejdbisvalidoidstr(*soid)) {
-                return NanThrowError("Argument 2: Invalid OID string");
+                return NanThrowError(NanError("Argument 2: Invalid OID string"));
             }
             Local<Function> cb;
             bson_oid_t oid;
@@ -740,10 +740,10 @@ namespace ejdb {
                 bson_init(bs);
                 toBSON(Handle<Object>::Cast(v), bs, false);
                 if (bs->err) {
-                    Local<String> msg = NanNew<String>(bson_first_errormsg(bs));
+                    Local<Value> err = NanError(bson_first_errormsg(bs));
                     bson_del(bs);
                     delete cmdata;
-                    return NanThrowError(msg);
+                    return NanThrowError(err);
                 }
                 bson_finish(bs);
                 cmdata->bsons.push_back(bs);
@@ -776,10 +776,10 @@ namespace ejdb {
             bson_init_as_query(bs);
             toBSON(cmdobj, bs, false);
             if (bs->err) {
-                Local<String> msg = NanNew<String>(bson_first_errormsg(bs));
+                Local<Value> err = NanError(bson_first_errormsg(bs));
                 bson_del(bs);
                 delete cmdata;
-                return NanThrowError(msg);
+                return NanThrowError(err);
             }
             bson_finish(bs);
             cmdata->bsons.push_back(bs);
@@ -804,7 +804,7 @@ namespace ejdb {
             REQ_INT32_ARG(2, qflags);
 
             if (qarr->Length() == 0) {
-                return NanThrowError("Query array must have at least one element");
+                return NanThrowError(NanError("Query array must have at least one element"));
             }
             Local<Function> cb;
             BSONQCmdData *cmdata = new BSONQCmdData(*cname, qflags);
@@ -816,17 +816,17 @@ namespace ejdb {
                     continue;
                 } else if (!qv->IsObject()) {
                     delete cmdata;
-                    return NanThrowError("Each element of query array must be an object (except last hints element)");
+                    return NanThrowError(NanError("Each element of query array must be an object (except last hints element)"));
                 }
                 bson *bs = bson_create();
                 bson_init_as_query(bs);
                 toBSON(Local<Object>::Cast(qv), bs, true);
                 bson_finish(bs);
                 if (bs->err) {
-                    Local<String> msg = NanNew<String>(bson_first_errormsg(bs));
+                    Local<Value> err = NanError(bson_first_errormsg(bs));
                     bson_del(bs);
                     delete cmdata;
-                    return NanThrowError(msg);
+                    return NanThrowError(err);
                 }
                 cmdata->bsons.push_back(bs);
             }
@@ -872,7 +872,7 @@ namespace ejdb {
                 njb->set_index(&task);
                 njb->set_index_after(&task);
                 if (task.cmd_ret) {
-                    return NanThrowError(task.cmd_ret_msg.c_str());
+                    return NanThrowError(NanError(task.cmd_ret_msg.c_str()));
                 }
             }
             NanReturnUndefined();
@@ -891,7 +891,7 @@ namespace ejdb {
                 njb->sync(&task);
                 njb->sync_after(&task);
                 if (task.cmd_ret) {
-                    return NanThrowError(task.cmd_ret_msg.c_str());
+                    return NanThrowError(NanError(task.cmd_ret_msg.c_str()));
                 }
             }
             NanReturnUndefined();
@@ -901,11 +901,11 @@ namespace ejdb {
             NanEscapableScope();
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             if (!ejdbisopen(njb->m_jb)) {
-                return NanThrowError("Operation on closed EJDB instance");
+                return NanThrowError(NanError("Operation on closed EJDB instance"));
             }
             bson *meta = ejdbmeta(njb->m_jb);
             if (!meta) {
-                return NanThrowError(njb->_jb_error_msg());
+                return NanThrowError(NanError(njb->_jb_error_msg()));
             }
             bson_iterator it;
             bson_iterator_init(&it, meta);
@@ -936,7 +936,7 @@ namespace ejdb {
             assert(njb);
             EJDB *jb = njb->m_jb;
             if (!ejdbisopen(jb)) {
-                return NanThrowError("Operation on closed EJDB instance");
+                return NanThrowError(NanError("Operation on closed EJDB instance"));
             }
             TxCmdData *cmdata = new TxCmdData(*cname);
             Local<Function> cb;
@@ -956,7 +956,7 @@ namespace ejdb {
             NanEscapableScope();
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             if (!njb->m_jb) { //not using ejdbisopen()
-                return NanThrowError("Operation on closed EJDB instance");
+                return NanThrowError(NanError("Operation on closed EJDB instance"));
             }
             NanReturnValue(NanNew<Integer>(ejdbecode(njb->m_jb)));
         }
@@ -988,11 +988,11 @@ namespace ejdb {
             }
 
             if (!ejdbisopen(njb->m_jb)) {
-                return NanThrowError("Operation on closed EJDB instance");
+                return NanThrowError(NanError("Operation on closed EJDB instance"));
             }
             EJCOLL *coll = ejdbcreatecoll(njb->m_jb, *cname, &jcopts);
             if (!coll) {
-                return NanThrowError(njb->_jb_error_msg());
+                return NanThrowError(NanError(njb->_jb_error_msg()));
             }
         }
 
@@ -1003,7 +1003,7 @@ namespace ejdb {
             REQ_FUN_ARG(2, cb);
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             if (!ejdbisopen(njb->m_jb)) {
-                return NanThrowError("Operation on closed EJDB instance");
+                return NanThrowError(NanError("Operation on closed EJDB instance"));
             }
             RMCollCmdData *cmdata = new RMCollCmdData(*cname, prune->BooleanValue());
             RMCollCmdTask *task = new RMCollCmdTask(cb, njb, cmdRemoveColl, cmdata, RMCollCmdTask::delete_val);
@@ -1802,7 +1802,7 @@ finish:
             NanEscapableScope();
             NodeEJDBCursor *c = ObjectWrap::Unwrap< NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return NanThrowError("Cursor closed");
+                return NanThrowError(NanError("Cursor closed"));
             }
             int rsz = TCLISTNUM(c->m_rs);
             NanReturnValue(NanNew<Boolean>(c->m_rs && ((c->m_no_next && rsz > 0) || (c->m_pos + 1 < rsz))));
@@ -1812,7 +1812,7 @@ finish:
             NanEscapableScope();
             NodeEJDBCursor *c = ObjectWrap::Unwrap< NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return NanThrowError("Cursor closed");
+                return NanThrowError(NanError("Cursor closed"));
             }
             int rsz = TCLISTNUM(c->m_rs);
             if (c->m_no_next) {
@@ -1830,7 +1830,7 @@ finish:
             NanEscapableScope();
             NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return NanThrowError("Cursor closed");
+                return NanThrowError(NanError("Cursor closed"));
             }
             NanReturnValue(NanNew<Integer>(TCLISTNUM(c->m_rs)));
         }
@@ -1839,7 +1839,7 @@ finish:
             NanEscapableScope();
             NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return NanThrowError("Cursor closed");
+                return NanThrowError(NanError("Cursor closed"));
             }
             NanReturnValue(NanNew<Integer>(c->m_pos));
         }
@@ -1875,12 +1875,12 @@ finish:
             REQ_STR_ARG(0, fpath);
             NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return NanThrowError("Cursor closed");
+                return NanThrowError(NanError("Cursor closed"));
             }
             int pos = c->m_pos;
             int rsz = TCLISTNUM(c->m_rs);
             if (rsz == 0) {
-                return NanThrowError("Empty cursor");
+                return NanThrowError(NanError("Empty cursor"));
             }
             assert(!(pos < 0 || pos >= rsz)); //m_pos correctly set by s_set_pos
             const void *bsdata = TCLISTVALPTR(c->m_rs, pos);
@@ -1898,12 +1898,12 @@ finish:
             NanEscapableScope();
             NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return NanThrowError("Cursor closed");
+                return NanThrowError(NanError("Cursor closed"));
             }
             int pos = c->m_pos;
             int rsz = TCLISTNUM(c->m_rs);
             if (rsz == 0) {
-                return NanThrowError("Empty cursor");
+                return NanThrowError(NanError("Empty cursor"));
             }
             assert(!(pos < 0 || pos >= rsz)); //m_pos correctly set by s_set_pos
             const void *bsdata = TCLISTVALPTR(c->m_rs, pos);
@@ -1991,7 +1991,7 @@ finish:
         Local<Value> argv[4];
         if (task->cmd_ret != 0) { //error case
             if (task->cb->IsEmpty()) {
-                NanThrowError(task->cmd_ret_msg.c_str());
+                NanThrowError(NanError(task->cmd_ret_msg.c_str()));
                 return NanUndefined();
             } else {
                 argv[0] = NanError(task->cmd_ret_msg.c_str());
