@@ -21,6 +21,7 @@
 #include <v8.h>
 #include <string>
 
+#include <nan.h>
 
 namespace ejdb {
 
@@ -30,7 +31,7 @@ namespace ejdb {
         //uv request
         uv_work_t uv_work;
 
-        v8::Persistent<v8::Function> cb;
+        NanCallback *cb;
         T* wrapped;
 
         //cmd spec
@@ -72,13 +73,16 @@ namespace ejdb {
         wrapped(_wrapped), cmd(_cmd), cmd_data(_cmd_data), cmd_ret(0), cmd_ret_data_length(0), entity(0) {
 
             this->free_cmd_data = _free_cmd_data;
-            this->cb = v8::Persistent<v8::Function>::New(_cb);
+            this->cb = new NanCallback();
+            if (!(_cb.IsEmpty() || _cb->IsNull() || _cb->IsUndefined())) {
+                this->cb->SetFunction(_cb);
+            }
             this->wrapped->Ref();
             this->uv_work.data = this;
         }
 
         virtual ~EIOCmdTask() {
-            this->cb.Dispose();
+            delete this->cb;
             this->wrapped->Unref();
             if (this->free_cmd_data) {
                 this->free_cmd_data(this);

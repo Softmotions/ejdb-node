@@ -17,6 +17,7 @@
 #include <v8.h>
 #include <node.h>
 #include <node_buffer.h>
+#include <node_object_wrap.h>
 #include <ejdb_private.h>
 
 #include "ejdb_args.h"
@@ -36,6 +37,7 @@
 #else
 #include <ext/hash_set>
 #ifdef __GNUC__
+
 using namespace __gnu_cxx;
 #endif
 #endif
@@ -45,18 +47,16 @@ using namespace v8;
 
 static const int CMD_RET_ERROR = 1;
 
-#define DEFINE_INT64_CONSTANT(target, constant)                       \
-  (target)->Set(String::NewSymbol(#constant),                         \
-                Number::New((int64_t) constant),                      \
-                static_cast<PropertyAttribute>(                       \
-                    ReadOnly|DontDelete))
+#define DEFINE_INT64_CONSTANT(target, constant)                     \
+  (target)->Set(NanNew<String>(#constant),                          \
+                NanNew<Number>((int64_t) constant),                 \
+                static_cast<PropertyAttribute>(ReadOnly|DontDelete))
 
 namespace ejdb {
 
     ///////////////////////////////////////////////////////////////////////////
     //                           Some symbols                                //
     ///////////////////////////////////////////////////////////////////////////
-
 
     static Persistent<String> sym_large;
     static Persistent<String> sym_compressed;
@@ -86,14 +86,14 @@ namespace ejdb {
     };
 
     char* fetch_string_data(Handle<Value> sobj, eFetchStatus* fs, const char* def) {
-        HandleScope scope;
+        NanScope();
         if (sobj->IsNull() || sobj->IsUndefined()) {
             if (fs) {
                 *fs = FETCH_DEFAULT;
             }
             return def ? strdup(def) : strdup("");
         }
-        String::Utf8Value value(sobj);
+        NanUtf8String value(sobj);
         const char* data = *value;
         if (fs) {
             *fs = FETCH_VAL;
@@ -102,7 +102,7 @@ namespace ejdb {
     }
 
     int64_t fetch_int_data(Handle<Value> sobj, eFetchStatus* fs, int64_t def) {
-        HandleScope scope;
+        NanScope();
         if (!(sobj->IsNumber() || sobj->IsInt32() || sobj->IsUint32())) {
             if (fs) {
                 *fs = FETCH_DEFAULT;
@@ -116,7 +116,7 @@ namespace ejdb {
     }
 
     bool fetch_bool_data(Handle<Value> sobj, eFetchStatus* fs, bool def) {
-        HandleScope scope;
+        NanScope();
         if (sobj->IsNull() || sobj->IsUndefined()) {
             if (fs) {
                 *fs = FETCH_DEFAULT;
@@ -130,7 +130,7 @@ namespace ejdb {
     }
 
     double fetch_real_data(Handle<Value> sobj, eFetchStatus* fs, double def) {
-        HandleScope scope;
+        NanScope();
         if (!(sobj->IsNumber() || sobj->IsInt32())) {
             if (fs) {
                 *fs = FETCH_DEFAULT;
@@ -177,7 +177,7 @@ namespace ejdb {
     static void toBSON0(Handle<Object> obj, bson *bs, TBSONCTX *ctx);
 
     static Handle<Value> toV8Value(bson_iterator *it) {
-        HandleScope scope;
+        NanEscapableScope();
         bson_type bt = bson_iterator_type(it);
 
         switch (bt) {
@@ -185,35 +185,35 @@ namespace ejdb {
             {
                 char xoid[25];
                 bson_oid_to_string(bson_iterator_oid(it), xoid);
-                return scope.Close(String::New(xoid, 24));
+                return NanEscapeScope(NanNew<String>(xoid));
             }
             case BSON_STRING:
             case BSON_SYMBOL:
-                return scope.Close(String::New(bson_iterator_string(it), bson_iterator_string_len(it) - 1));
+                return NanEscapeScope(NanNew<String>(bson_iterator_string(it), bson_iterator_string_len(it) - 1));
             case BSON_NULL:
-                return scope.Close(Null());
+                return NanNull();
             case BSON_UNDEFINED:
-                return scope.Close(Undefined());
+                return NanUndefined();
             case BSON_INT:
-                return scope.Close(Integer::New(bson_iterator_int_raw(it)));
+                return NanEscapeScope(NanNew<Integer>(bson_iterator_int_raw(it)));
             case BSON_LONG:
-                return scope.Close(Number::New((double) bson_iterator_long_raw(it)));
+                return NanEscapeScope(NanNew<Number>(bson_iterator_long_raw(it)));
             case BSON_DOUBLE:
-                return scope.Close(Number::New(bson_iterator_double_raw(it)));
+                return NanEscapeScope(NanNew<Number>(bson_iterator_double_raw(it)));
             case BSON_BOOL:
-                return scope.Close(Boolean::New(bson_iterator_bool_raw(it) ? true : false));
+                return NanEscapeScope(NanNew<Boolean>(bson_iterator_bool_raw(it) ? true : false));
             case BSON_OBJECT:
             case BSON_ARRAY:
             {
                 bson_iterator nit;
-                bson_iterator_subiterator(it, &nit);
-                return scope.Close(toV8Object(&nit, bt));
+                bson_iterator_subiterator(it, &nit);    
+                return NanEscapeScope(toV8Object(&nit, bt));
             }
             case BSON_DATE:
-                return scope.Close(Date::New((double) bson_iterator_date(it)));
+                return NanEscapeScope(NanNew<Date>((double) bson_iterator_date(it)));
             case BSON_BINDATA:
                 //TODO test it!
-                return scope.Close(Buffer::New(String::New(bson_iterator_bin_data(it), bson_iterator_bin_len(it))));
+                return NanEscapeScope(NanNewBufferHandle(bson_iterator_bin_data(it), bson_iterator_bin_len(it)));
             case BSON_REGEX:
             {
                 const char *re = bson_iterator_regex(it);
@@ -228,22 +228,22 @@ namespace ejdb {
                         rflgs |= RegExp::kMultiline;
                     }
                 }
-                return scope.Close(RegExp::New(String::New(re), (RegExp::Flags) rflgs));
+                return NanEscapeScope(NanNew<RegExp>(NanNew<String>(re), (RegExp::Flags) rflgs));
             }
             default:
                 break;
         }
-        return scope.Close(Undefined());
+        return NanUndefined();
     }
 
     static Handle<Object> toV8Object(bson_iterator *it, bson_type obt) {
-        HandleScope scope;
+        NanEscapableScope();
         Local<Object> ret;
         uint32_t knum = 0;
         if (obt == BSON_ARRAY) {
-            ret = Array::New();
+            ret = NanNew<Array>();
         } else if (obt == BSON_OBJECT) {
-            ret = Object::New();
+            ret = NanNew<Object>();
         } else {
             assert(0);
         }
@@ -259,62 +259,60 @@ namespace ejdb {
                     char xoid[25];
                     bson_oid_to_string(bson_iterator_oid(it), xoid);
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, String::New(xoid, 24));
+                        ret->Set(knum, NanNew<String>(xoid, 24));
                     } else {
-                        ret->Set(String::New(key), String::New(xoid, 24));
+                        ret->Set(NanNew<String>(key), NanNew<String>(xoid, 24));
                     }
                     break;
                 }
                 case BSON_STRING:
                 case BSON_SYMBOL:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum,
-                                String::New(bson_iterator_string(it), bson_iterator_string_len(it) - 1));
+                        ret->Set(knum, NanNew<String>(bson_iterator_string(it), bson_iterator_string_len(it) - 1));
                     } else {
-                        ret->Set(String::New(key),
-                                String::New(bson_iterator_string(it), bson_iterator_string_len(it) - 1));
+                        ret->Set(NanNew<String>(key), NanNew<String>(bson_iterator_string(it), bson_iterator_string_len(it) - 1));
                     }
                     break;
                 case BSON_NULL:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, Null());
+                        ret->Set(knum, NanNull());
                     } else {
-                        ret->Set(String::New(key), Null());
+                        ret->Set(NanNew<String>(key), NanNull());
                     }
                     break;
                 case BSON_UNDEFINED:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, Undefined());
+                        ret->Set(knum, NanUndefined());
                     } else {
-                        ret->Set(String::New(key), Undefined());
+                        ret->Set(NanNew<String>(key), NanUndefined());
                     }
                     break;
                 case BSON_INT:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, Integer::New(bson_iterator_int_raw(it)));
+                        ret->Set(knum, NanNew<Integer>(bson_iterator_int_raw(it)));
                     } else {
-                        ret->Set(String::New(key), Integer::New(bson_iterator_int_raw(it)));
+                        ret->Set(NanNew<String>(key), NanNew<Integer>(bson_iterator_int_raw(it)));
                     }
                     break;
                 case BSON_LONG:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, Number::New((double) bson_iterator_long_raw(it)));
+                        ret->Set(knum, NanNew<Number>((double) bson_iterator_long_raw(it)));
                     } else {
-                        ret->Set(String::New(key), Number::New((double) bson_iterator_long_raw(it)));
+                        ret->Set(NanNew<String>(key), NanNew<Number>((double) bson_iterator_long_raw(it)));
                     }
                     break;
                 case BSON_DOUBLE:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, Number::New(bson_iterator_double_raw(it)));
+                        ret->Set(knum, NanNew<Number>(bson_iterator_double_raw(it)));
                     } else {
-                        ret->Set(String::New(key), Number::New(bson_iterator_double_raw(it)));
+                        ret->Set(NanNew<String>(key), NanNew<Number>(bson_iterator_double_raw(it)));
                     }
                     break;
                 case BSON_BOOL:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, Boolean::New(bson_iterator_bool_raw(it) ? true : false));
+                        ret->Set(knum, bson_iterator_bool_raw(it) ? NanTrue() : NanFalse());
                     } else {
-                        ret->Set(String::New(key), Boolean::New(bson_iterator_bool_raw(it) ? true : false));
+                        ret->Set(NanNew<String>(key), bson_iterator_bool_raw(it) ? NanTrue() : NanFalse());
                     }
                     break;
                 case BSON_OBJECT:
@@ -325,26 +323,22 @@ namespace ejdb {
                     if (obt == BSON_ARRAY) {
                         ret->Set(knum, toV8Object(&nit, bt));
                     } else {
-                        ret->Set(String::New(key), toV8Object(&nit, bt));
+                        ret->Set(NanNew<String>(key), toV8Object(&nit, bt));
                     }
                     break;
                 }
                 case BSON_DATE:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, Date::New((double) bson_iterator_date(it)));
+                        ret->Set(knum, NanNew<Date>((double) bson_iterator_date(it)));
                     } else {
-                        ret->Set(String::New(key), Date::New((double) bson_iterator_date(it)));
+                        ret->Set(NanNew<String>(key), NanNew<Date>((double) bson_iterator_date(it)));
                     }
                     break;
                 case BSON_BINDATA:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum,
-                                Buffer::New(String::New(bson_iterator_bin_data(it),
-                                bson_iterator_bin_len(it))));
+                        ret->Set(knum, NanNewBufferHandle(bson_iterator_bin_data(it), bson_iterator_bin_len(it)));
                     } else {
-                        ret->Set(String::New(key),
-                                Buffer::New(String::New(bson_iterator_bin_data(it),
-                                bson_iterator_bin_len(it))));
+                        ret->Set(NanNew<String>(key), NanNewBufferHandle(bson_iterator_bin_data(it), bson_iterator_bin_len(it)));
                     }
                     break;
                 case BSON_REGEX:
@@ -362,26 +356,26 @@ namespace ejdb {
                         }
                     }
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, RegExp::New(String::New(re), (RegExp::Flags) rflgs));
+                        ret->Set(knum, NanNew<RegExp>(NanNew<String>(re), (RegExp::Flags) rflgs));
                     } else {
-                        ret->Set(String::New(key), RegExp::New(String::New(re), (RegExp::Flags) rflgs));
+                        ret->Set(NanNew<String>(key), NanNew<RegExp>(NanNew<String>(re), (RegExp::Flags) rflgs));
                     }
                     break;
                 }
                 default:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, Undefined());
+                        ret->Set(knum, NanUndefined());
                     } else {
-                        ret->Set(String::New(key), Undefined());
+                        ret->Set(NanNew<String>(key), NanUndefined());
                     }
                     break;
             }
         }
-        return scope.Close(ret);
+        return NanEscapeScope(ret);
     }
 
     static void toBSON0(Handle<Object> obj, bson *bs, TBSONCTX *ctx) {
-        HandleScope scope;
+        NanScope();
         assert(ctx && obj->IsObject());
         V8ObjSet::iterator it = ctx->tset.find(obj);
         if (it != ctx->tset.end()) {
@@ -483,7 +477,7 @@ namespace ejdb {
 
     /** Convert V8 object into binary json instance. After usage, it must be freed by bson_del() */
     static void toBSON(Handle<Object> obj, bson *bs, bool inquery) {
-        HandleScope scope;
+        NanScope();
         TBSONCTX ctx;
         ctx.inquery = inquery;
         toBSON0(obj, bs, &ctx);
@@ -630,15 +624,15 @@ namespace ejdb {
             delete task;
         }
 
-        static Handle<Value> s_new_object(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_new_object) {
+            NanEscapableScope();
             NodeEJDB *njb = new NodeEJDB();
             njb->Wrap(args.This());
-            return scope.Close(args.This());
+            NanReturnThis();
         }
 
-        static Handle<Value> s_open(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_open) {
+            NanEscapableScope();
             Local<Function> cb;
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             REQ_STR_ARG(0, dbPath);
@@ -648,37 +642,37 @@ namespace ejdb {
                 cb = Local<Function>::Cast(args[2]);
                 OpenCmdTask *task = new OpenCmdTask(cb, njb, cmdOpen, cmdata, OpenCmdTask::delete_val);
                 uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
-                return scope.Close(Undefined());
+                NanReturnUndefined();//return NanUndefined();
             } else {
                 OpenCmdTask task(cb, njb, cmdOpen, cmdata, OpenCmdTask::delete_val);
                 njb->open(&task);
-                return scope.Close(njb->open_after(&task));
+                NanReturnValue(njb->open_after(&task));
             }
         }
 
-        static Handle<Value> s_close(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_close) {
+            NanEscapableScope();
             Local<Function> cb;
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             if (args[0]->IsFunction()) {
                 cb = Local<Function>::Cast(args[0]);
                 EJBTask *task = new EJBTask(cb, njb, cmdClose, NULL, NULL);
                 uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
-                return scope.Close(Undefined());
+                NanReturnUndefined();//return NanUndefined();
             } else {
                 EJBTask task(cb, njb, cmdClose, NULL, NULL);
                 njb->close(&task);
-                return scope.Close(njb->close_after(&task));
+                NanReturnValue(njb->close_after(&task));
             }
         }
 
-        static Handle<Value> s_load(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_load) {
+            NanEscapableScope();
             REQ_ARGS(2);
             REQ_STR_ARG(0, cname); //Collection name
             REQ_STR_ARG(1, soid); //String OID
             if (!ejdbisvalidoidstr(*soid)) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Argument 2: Invalid OID string"))));
+                return NanThrowError(NanError("Argument 2: Invalid OID string"));
             }
             Local<Function> cb;
             bson_oid_t oid;
@@ -691,21 +685,21 @@ namespace ejdb {
                 cb = Local<Function>::Cast(args[2]);
                 BSONCmdTask *task = new BSONCmdTask(cb, njb, cmdLoad, cmdata, BSONCmdTask::delete_val);
                 uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
-                return scope.Close(Undefined());
+                NanReturnUndefined();
             } else {
                 BSONCmdTask task(cb, njb, cmdLoad, cmdata, BSONCmdTask::delete_val);
                 njb->load(&task);
-                return scope.Close(njb->load_after(&task));
+                NanReturnValue(njb->load_after(&task));
             }
         }
 
-        static Handle<Value> s_remove(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_remove) {
+            NanEscapableScope();
             REQ_ARGS(2);
             REQ_STR_ARG(0, cname); //Collection name
             REQ_STR_ARG(1, soid); //String OID
             if (!ejdbisvalidoidstr(*soid)) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Argument 2: Invalid OID string"))));
+                return NanThrowError(NanError("Argument 2: Invalid OID string"));
             }
             Local<Function> cb;
             bson_oid_t oid;
@@ -718,16 +712,16 @@ namespace ejdb {
                 cb = Local<Function>::Cast(args[2]);
                 BSONCmdTask *task = new BSONCmdTask(cb, njb, cmdRemove, cmdata, BSONCmdTask::delete_val);
                 uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
-                return scope.Close(Undefined());
+                NanReturnUndefined();
             } else {
                 BSONCmdTask task(cb, njb, cmdRemove, cmdata, BSONCmdTask::delete_val);
                 njb->remove(&task);
-                return scope.Close(njb->remove_after(&task));
+                NanReturnValue(njb->remove_after(&task));
             }
         }
 
-        static Handle<Value> s_save(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_save) {
+            NanEscapableScope();
             REQ_ARGS(3);
             REQ_STR_ARG(0, cname); //Collection name
             REQ_ARR_ARG(1, oarr); //Array of JSON objects
@@ -746,15 +740,15 @@ namespace ejdb {
                 bson_init(bs);
                 toBSON(Handle<Object>::Cast(v), bs, false);
                 if (bs->err) {
-                    Local<String> msg = String::New(bson_first_errormsg(bs));
+                    Local<Value> err = NanError(bson_first_errormsg(bs));
                     bson_del(bs);
                     delete cmdata;
-                    return scope.Close(ThrowException(Exception::Error(msg)));
+                    return NanThrowError(err);
                 }
                 bson_finish(bs);
                 cmdata->bsons.push_back(bs);
             }
-            if (opts->Get(sym_merge)->BooleanValue()) {
+            if (opts->Get(NanNew(sym_merge))->BooleanValue()) {
                 cmdata->merge = true;
             }
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
@@ -763,16 +757,16 @@ namespace ejdb {
                 cb = Local<Function>::Cast(args[3]);
                 BSONCmdTask *task = new BSONCmdTask(cb, njb, cmdSave, cmdata, BSONCmdTask::delete_val);
                 uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
-                return scope.Close(Undefined());
+                NanReturnUndefined();
             } else {
                 BSONCmdTask task(cb, njb, cmdSave, cmdata, BSONCmdTask::delete_val);
                 njb->save(&task);
-                return scope.Close(njb->save_after(&task));
+                NanReturnValue(njb->save_after(&task));
             }
         }
 
-        static Handle<Value> s_cmd(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_cmd) {
+            NanEscapableScope();
             REQ_ARGS(1);
             REQ_OBJ_ARG(0, cmdobj);
 
@@ -782,10 +776,10 @@ namespace ejdb {
             bson_init_as_query(bs);
             toBSON(cmdobj, bs, false);
             if (bs->err) {
-                Local<String> msg = String::New(bson_first_errormsg(bs));
+                Local<Value> err = NanError(bson_first_errormsg(bs));
                 bson_del(bs);
                 delete cmdata;
-                return scope.Close(ThrowException(Exception::Error(msg)));
+                return NanThrowError(err);
             }
             bson_finish(bs);
             cmdata->bsons.push_back(bs);
@@ -794,23 +788,23 @@ namespace ejdb {
                 cb = Local<Function>::Cast(args[1]);
                 BSONQCmdTask *task = new BSONQCmdTask(cb, njb, cmdCmd, cmdata, BSONQCmdTask::delete_val);
                 uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
-                return scope.Close(Undefined());
+                NanReturnUndefined();
             } else {
                 BSONQCmdTask task(cb, njb, cmdCmd, cmdata, BSONQCmdTask::delete_val);
                 njb->ejdbcmd(&task);
-                return scope.Close(njb->ejdbcmd_after(&task));
+                NanReturnValue(njb->ejdbcmd_after(&task));
             }
         }
 
-        static Handle<Value> s_query(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_query) {
+            NanEscapableScope();
             REQ_ARGS(3);
             REQ_STR_ARG(0, cname)
             REQ_ARR_ARG(1, qarr);
             REQ_INT32_ARG(2, qflags);
 
             if (qarr->Length() == 0) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Query array must have at least one element"))));
+                return NanThrowError(NanError("Query array must have at least one element"));
             }
             Local<Function> cb;
             BSONQCmdData *cmdata = new BSONQCmdData(*cname, qflags);
@@ -822,27 +816,24 @@ namespace ejdb {
                     continue;
                 } else if (!qv->IsObject()) {
                     delete cmdata;
-                    return scope.Close(ThrowException(
-                            Exception::Error(
-                            String::New("Each element of query array must be an object (except last hints element)"))
-                            ));
+                    return NanThrowError(NanError("Each element of query array must be an object (except last hints element)"));
                 }
                 bson *bs = bson_create();
                 bson_init_as_query(bs);
                 toBSON(Local<Object>::Cast(qv), bs, true);
                 bson_finish(bs);
                 if (bs->err) {
-                    Local<String> msg = String::New(bson_first_errormsg(bs));
+                    Local<Value> err = NanError(bson_first_errormsg(bs));
                     bson_del(bs);
                     delete cmdata;
-                    return scope.Close(ThrowException(Exception::Error(msg)));
+                    return NanThrowError(err);
                 }
                 cmdata->bsons.push_back(bs);
             }
-
+            
             if (len > 1 && qarr->Get(len - 1)->IsObject()) {
                 Local<Object> hints = Local<Object>::Cast(qarr->Get(len - 1));
-                if (hints->Get(sym_explain)->BooleanValue()) {
+                if (hints->Get(NanNew(sym_explain))->BooleanValue()) {
                     cmdata->log = tcxstrnew();
                 }
             }
@@ -853,16 +844,16 @@ namespace ejdb {
                 cb = Local<Function>::Cast(args[3]);
                 BSONQCmdTask *task = new BSONQCmdTask(cb, njb, cmdQuery, cmdata, BSONQCmdTask::delete_val);
                 uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
-                return scope.Close(Undefined());
+                NanReturnUndefined();
             } else {
                 BSONQCmdTask task(cb, njb, cmdQuery, cmdata, BSONQCmdTask::delete_val);
                 njb->query(&task);
-                return scope.Close(njb->query_after(&task));
+                NanReturnValue(njb->query_after(&task));
             }
         }
 
-        static Handle<Value> s_set_index(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_set_index) {
+            NanEscapableScope();
             REQ_ARGS(3);
             REQ_STR_ARG(0, cname)
             REQ_STR_ARG(1, ipath)
@@ -881,14 +872,14 @@ namespace ejdb {
                 njb->set_index(&task);
                 njb->set_index_after(&task);
                 if (task.cmd_ret) {
-                    return scope.Close(Exception::Error(String::New(task.cmd_ret_msg.c_str())));
+                    return NanThrowError(NanError(task.cmd_ret_msg.c_str()));
                 }
             }
-            return scope.Close(Undefined());
+            NanReturnUndefined();
         }
 
-        static Handle<Value> s_sync(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_sync) {
+            NanEscapableScope();
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             Local<Function> cb;
             if (args[0]->IsFunction()) {
@@ -900,33 +891,33 @@ namespace ejdb {
                 njb->sync(&task);
                 njb->sync_after(&task);
                 if (task.cmd_ret) {
-                    return scope.Close(Exception::Error(String::New(task.cmd_ret_msg.c_str())));
+                    return NanThrowError(NanError(task.cmd_ret_msg.c_str()));
                 }
             }
-            return scope.Close(Undefined());
+            NanReturnUndefined();
         }
 
-        static Handle<Value> s_db_meta(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_db_meta) {
+            NanEscapableScope();
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             if (!ejdbisopen(njb->m_jb)) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Operation on closed EJDB instance"))));
+                return NanThrowError(NanError("Operation on closed EJDB instance"));
             }
             bson *meta = ejdbmeta(njb->m_jb);
             if (!meta) {
-                return scope.Close(ThrowException(Exception::Error(String::New(njb->_jb_error_msg()))));
+                return NanThrowError(NanError(njb->_jb_error_msg()));
             }
             bson_iterator it;
             bson_iterator_init(&it, meta);
             Handle<Object> ret = toV8Object(&it);
             bson_del(meta);
-            return scope.Close(ret);
+            NanReturnValue(ret);
         }
 
         //transaction control handlers
 
-        static Handle<Value> s_coll_txctl(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_coll_txctl) {
+            NanEscapableScope();
             REQ_STR_ARG(0, cname);
             //operation values:
             //cmdTxBegin = 8, //Begin collection transaction
@@ -939,13 +930,13 @@ namespace ejdb {
                     op == cmdTxAbort ||
                     op == cmdTxCommit ||
                     op == cmdTxStatus)) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Invalid value of 1 argument"))));
+                return NanThrowTypeError("Invalid value of 1 argument");
             }
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             assert(njb);
             EJDB *jb = njb->m_jb;
             if (!ejdbisopen(jb)) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Operation on closed EJDB instance"))));
+                return NanThrowError(NanError("Operation on closed EJDB instance"));
             }
             TxCmdData *cmdata = new TxCmdData(*cname);
             Local<Function> cb;
@@ -953,75 +944,77 @@ namespace ejdb {
                 cb = Local<Function>::Cast(args[2]);
                 TxCmdTask *task = new TxCmdTask(cb, njb, op, cmdata, TxCmdTask::delete_val);
                 uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
-                return scope.Close(Undefined());
+                NanReturnUndefined();
             } else {
                 TxCmdTask task(cb, njb, op, cmdata, NULL);
                 njb->txctl(&task);
-                return scope.Close(njb->txctl_after(&task));
+                NanReturnValue(njb->txctl_after(&task));
             }
         }
 
-        static Handle<Value> s_ecode(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_ecode) {
+            NanEscapableScope();
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             if (!njb->m_jb) { //not using ejdbisopen()
-                return scope.Close(ThrowException(Exception::Error(String::New("Operation on closed EJDB instance"))));
+                return NanThrowError(NanError("Operation on closed EJDB instance"));
             }
-            return scope.Close(Integer::New(ejdbecode(njb->m_jb)));
+            NanReturnValue(NanNew<Integer>(ejdbecode(njb->m_jb)));
         }
 
-        static Handle<Value> s_ensure_collection(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_ensure_collection) {
+            NanEscapableScope();
             Local<Function> cb;
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             REQ_STR_ARG(0, cname);
             REQ_OBJ_ARG(1, copts);
             EJCOLLOPTS jcopts;
             memset(&jcopts, 0, sizeof (jcopts));
-            jcopts.cachedrecords = (int) fetch_int_data(copts->Get(sym_cachedrecords), NULL, 0);
-            jcopts.compressed = fetch_bool_data(copts->Get(sym_compressed), NULL, false);
-            jcopts.large = fetch_bool_data(copts->Get(sym_large), NULL, false);
-            jcopts.records = fetch_int_data(copts->Get(sym_records), NULL, 0);
+            
+            // TODO: constants
+            jcopts.cachedrecords = (int) fetch_int_data(copts->Get(NanNew(sym_cachedrecords)), NULL, 0);
+            jcopts.compressed = fetch_bool_data(copts->Get(NanNew(sym_compressed)), NULL, false);
+            jcopts.large = fetch_bool_data(copts->Get(NanNew(sym_large)), NULL, false);
+            jcopts.records = fetch_int_data(copts->Get(NanNew(sym_records)), NULL, 0);
             EnsureCmdData *cmdata = new EnsureCmdData(*cname, jcopts);
             if (args[2]->IsFunction()) {
                 cb = Local<Function>::Cast(args[2]);
                 EnsureCmdTask *task = new EnsureCmdTask(cb, njb, cmdEnsure, cmdata, EnsureCmdTask::delete_val);
                 uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
-                return scope.Close(Undefined());
+                NanReturnUndefined();
             } else {
                 EnsureCmdTask task(cb, njb, cmdEnsure, cmdata, EnsureCmdTask::delete_val);
                 njb->ensure(&task);
-                return scope.Close(njb->ensure_after(&task));
+                NanReturnValue(njb->ensure_after(&task));
             }
 
             if (!ejdbisopen(njb->m_jb)) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Operation on closed EJDB instance"))));
+                return NanThrowError(NanError("Operation on closed EJDB instance"));
             }
             EJCOLL *coll = ejdbcreatecoll(njb->m_jb, *cname, &jcopts);
             if (!coll) {
-                return scope.Close(ThrowException(Exception::Error(String::New(njb->_jb_error_msg()))));
+                return NanThrowError(NanError(njb->_jb_error_msg()));
             }
         }
 
-        static Handle<Value> s_rm_collection(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_rm_collection) {
+            NanEscapableScope();
             REQ_STR_ARG(0, cname);
             REQ_VAL_ARG(1, prune);
             REQ_FUN_ARG(2, cb);
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
             if (!ejdbisopen(njb->m_jb)) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Operation on closed EJDB instance"))));
+                return NanThrowError(NanError("Operation on closed EJDB instance"));
             }
             RMCollCmdData *cmdata = new RMCollCmdData(*cname, prune->BooleanValue());
             RMCollCmdTask *task = new RMCollCmdTask(cb, njb, cmdRemoveColl, cmdata, RMCollCmdTask::delete_val);
             uv_queue_work(uv_default_loop(), &task->uv_work, s_exec_cmd_eio, (uv_after_work_cb)s_exec_cmd_eio_after);
-            return scope.Close(Undefined());
+            NanReturnUndefined();
         }
 
-        static Handle<Value> s_is_open(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_is_open) {
+            NanEscapableScope();
             NodeEJDB *njb = ObjectWrap::Unwrap< NodeEJDB > (args.This());
-            return scope.Close(Boolean::New(ejdbisopen(njb->m_jb)));
+            NanReturnValue(NanNew<Boolean>(ejdbisopen(njb->m_jb)));
         }
 
 
@@ -1134,18 +1127,18 @@ namespace ejdb {
         }
 
         void sync_after(EJBTask *task) {
-            HandleScope scope;
+            NanScope();
             Local<Value> argv[1];
-            if (task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined()) {
+            if (task->cb->IsEmpty()) {
                 return;
             }
             if (task->cmd_ret != 0) {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
             } else {
-                argv[0] = Local<Primitive>::New(Null());
+                argv[0] = NanNull();
             }
             TryCatch try_catch;
-            task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+            task->cb->Call(1, argv);
             if (try_catch.HasCaught()) {
                 FatalException(try_catch);
             }
@@ -1171,18 +1164,18 @@ namespace ejdb {
         }
 
         void set_index_after(SetIndexCmdTask *task) {
-            HandleScope scope;
+            NanScope();
             Local<Value> argv[1];
-            if (task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined()) {
+            if (task->cb->IsEmpty()) {
                 return;
             }
             if (task->cmd_ret != 0) {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
             } else {
-                argv[0] = Local<Primitive>::New(Null());
+                argv[0] = NanNull();
             }
             TryCatch try_catch;
-            task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+            task->cb->Call(1, argv);
             if (try_catch.HasCaught()) {
                 FatalException(try_catch);
             }
@@ -1201,15 +1194,15 @@ namespace ejdb {
         }
 
         void rm_collection_after(RMCollCmdTask *task) {
-            HandleScope scope;
+            NanScope();
             Local<Value> argv[1];
             if (task->cmd_ret != 0) {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
             } else {
-                argv[0] = Local<Primitive>::New(Null());
+                argv[0] = NanNull();
             }
             TryCatch try_catch;
-            task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+            task->cb->Call(1, argv);
             if (try_catch.HasCaught()) {
                 FatalException(try_catch);
             }
@@ -1234,25 +1227,26 @@ namespace ejdb {
         }
 
         Handle<Value> remove_after(BSONCmdTask *task) {
-            HandleScope scope;
+            NanEscapableScope();
             Local<Value> argv[1];
             if (task->cmd_ret != 0) {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
             } else {
-                argv[0] = Local<Primitive>::New(Null());
+                argv[0] = NanNull();
             }
-            if (task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined()) {
-                if (task->cmd_ret != 0)
-                    return scope.Close(ThrowException(argv[0]));
-                else
-                    return scope.Close(Undefined());
+            if (task->cb->IsEmpty()) {
+                if (task->cmd_ret != 0) {
+                    NanThrowError(argv[0]);
+                    return NanUndefined();
+                } else
+                    return NanUndefined();
             } else {
                 TryCatch try_catch;
-                task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+                task->cb->Call(1, argv);
                 if (try_catch.HasCaught()) {
                     FatalException(try_catch);
                 }
-                return scope.Close(Undefined());
+                return NanUndefined();
             }
         }
 
@@ -1293,36 +1287,37 @@ namespace ejdb {
         }
 
         Handle<Value> txctl_after(TxCmdTask *task) {
-            HandleScope scope;
+            NanEscapableScope();
             TxCmdData *cmdata = task->cmd_data;
             int args = 1;
             Local<Value> argv[2];
             if (task->cmd_ret != 0) {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
             } else {
-                argv[0] = Local<Primitive>::New(Null());
+                argv[0] = NanNull();
                 if (task->cmd == cmdTxStatus) {
-                    argv[1] = Local<Boolean>::New(Boolean::New(cmdata->txactive));
+                    argv[1] = NanNew<Boolean>(cmdata->txactive);
                     args = 2;
                 }
             }
-            if (task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined()) {
+            if (task->cb->IsEmpty()) {
                 if (task->cmd_ret != 0) {
-                    return scope.Close(ThrowException(argv[0]));
+                    NanThrowError(argv[0]);
+                    return NanUndefined();
                 } else {
                     if (task->cmd == cmdTxStatus) {
-                        return scope.Close(argv[1]);
+                        return NanEscapeScope(argv[1]);
                     } else {
-                        return scope.Close(Undefined());
+                        return NanUndefined();
                     }
                 }
             } else {
                 TryCatch try_catch;
-                task->cb->Call(Context::GetCurrent()->Global(), args, argv);
+                task->cb->Call(args, argv);
                 if (try_catch.HasCaught()) {
                     FatalException(try_catch);
                 }
-                return scope.Close(Undefined());
+                return NanUndefined();
             }
         }
 
@@ -1358,14 +1353,14 @@ namespace ejdb {
         }
 
         Handle<Value> save_after(BSONCmdTask *task) {
-            HandleScope scope;
+            NanEscapableScope();
             Local<Value> argv[2];
             if (task->cmd_ret != 0) {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
             } else {
-                argv[0] = Local<Primitive>::New(Null());
+                argv[0] = NanNull();
             }
-            Local<Array> oids = Array::New();
+            Local<Array> oids = NanNew<Array>();
             std::vector<bson_oid_t>::iterator it;
             int32_t c = 0;
             for (it = task->cmd_data->ids.begin(); it < task->cmd_data->ids.end(); it++) {
@@ -1373,21 +1368,25 @@ namespace ejdb {
                 if (oid.ints[0] || oid.ints[1] || oid.ints[2]) {
                     char oidhex[25];
                     bson_oid_to_string(&oid, oidhex);
-                    oids->Set(Integer::New(c++), String::New(oidhex));
+                    oids->Set(NanNew<Integer>(c++), NanNew<String>(oidhex));
                 } else {
-                    oids->Set(Integer::New(c++), Null());
+                    oids->Set(NanNew<Integer>(c++), NanNull());
                 }
             }
             argv[1] = oids;
-            if (task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined()) {
-                return (task->cmd_ret != 0) ? scope.Close(ThrowException(argv[0])) : scope.Close(argv[1]);
+            if (task->cb->IsEmpty()) {
+                if (task->cmd_ret != 0) {
+                    NanThrowError(argv[0]);
+                    return NanUndefined();
+                } else 
+                    return NanEscapeScope(argv[1]);
             } else {
                 TryCatch try_catch;
-                task->cb->Call(Context::GetCurrent()->Global(), 2, argv);
+                task->cb->Call(2, argv);
                 if (try_catch.HasCaught()) {
                     FatalException(try_catch);
                 }
-                return scope.Close(Undefined());
+                return NanUndefined();
             }
         }
 
@@ -1407,12 +1406,12 @@ namespace ejdb {
         }
 
         Handle<Value> load_after(BSONCmdTask *task) {
-            HandleScope scope;
+            NanEscapableScope();
             Local<Value> argv[2];
             if (task->cmd_ret != 0) {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
             } else {
-                argv[0] = Local<Primitive>::New(Null());
+                argv[0] = NanNull();
             }
             bson *bs = (!task->cmd_ret && task->cmd_data->bsons.size() > 0) ?
                     task->cmd_data->bsons.front() :
@@ -1420,19 +1419,23 @@ namespace ejdb {
             if (bs) {
                 bson_iterator it;
                 bson_iterator_init(&it, bs);
-                argv[1] = Local<Object>::New(toV8Object(&it, BSON_OBJECT));
+                argv[1] = NanNew(toV8Object(&it, BSON_OBJECT));
             } else {
-                argv[1] = Local<Primitive>::New(Null());
+                argv[1] = NanNull();
             }
-            if (task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined()) {
-                return (task->cmd_ret != 0) ? scope.Close(ThrowException(argv[0])) : scope.Close(argv[1]);
+            if (task->cb->IsEmpty()) {
+                if (task->cmd_ret != 0) {
+                    NanThrowError(argv[0]); 
+                    return NanUndefined();
+                } else 
+                    return NanEscapeScope(argv[1]);
             } else {
                 TryCatch try_catch;
-                task->cb->Call(Context::GetCurrent()->Global(), 2, argv);
+                task->cb->Call(2, argv);
                 if (try_catch.HasCaught()) {
                     FatalException(try_catch);
                 }
-                return scope.Close(Undefined());
+                return NanUndefined();
             }
         }
 
@@ -1547,25 +1550,27 @@ finish:
         }
 
         Handle<Value> open_after(OpenCmdTask *task) {
-            HandleScope scope;
+            NanEscapableScope();
             Local<Value> argv[1];
-            bool sync = task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined();
+            bool sync = task->cb->IsEmpty();
 
             if (task->cmd_ret != 0) {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
-                if (sync)
-                    return scope.Close(ThrowException(argv[0]));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
+                if (sync) {
+                    NanThrowError(argv[0]);
+                    return NanUndefined();
+                }
             } else {
-                argv[0] = Local<Primitive>::New(Null());
+                argv[0] = NanNull();
                 if (sync)
-                    return scope.Close(Undefined());
+                    return NanUndefined();
             }
             TryCatch try_catch;
-            task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+            task->cb->Call(1, argv);
             if (try_catch.HasCaught()) {
                 FatalException(try_catch);
             }
-            return scope.Close(Undefined());
+            return NanUndefined();
         }
 
         void close(EJBTask *task) {
@@ -1585,25 +1590,27 @@ finish:
         }
 
         Handle<Value> close_after(EJBTask *task) {
-            HandleScope scope;
+            NanEscapableScope();
             Local<Value> argv[1];
-            bool sync = task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined();
+            bool sync = task->cb->IsEmpty();
 
             if (task->cmd_ret != 0) {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
-                if (sync)
-                    return scope.Close(ThrowException(argv[0]));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
+                if (sync) {
+                    NanThrowError(argv[0]);
+                    return NanUndefined();
+                }
             } else {
-                argv[0] = Local<Primitive>::New(Null());
+                argv[0] = NanNull();
                 if (sync)
-                    return scope.Close(Undefined());
+                    return NanUndefined();
             }
             TryCatch try_catch;
-            task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+            task->cb->Call(1, argv);
             if (try_catch.HasCaught()) {
                 FatalException(try_catch);
             }
-            return scope.Close(Undefined());
+            return NanUndefined();
         }
 
         void ensure(EnsureCmdTask *task) {
@@ -1621,25 +1628,27 @@ finish:
         }
 
         Handle<Value> ensure_after(EnsureCmdTask *task) {
-            HandleScope scope;
+            NanEscapableScope();
             Local<Value> argv[1];
-            bool sync = task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined();
+            bool sync = task->cb->IsEmpty();
 
             if (task->cmd_ret != 0) {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
-                if (sync)
-                    return scope.Close(ThrowException(argv[0]));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
+                if (sync) {
+                    NanThrowError(argv[0]);
+                    return NanUndefined();
+                }
             } else {
-                argv[0] = Local<Primitive>::New(Null());
+                argv[0] = NanNull();
                 if (sync)
-                    return scope.Close(Undefined());
+                    return NanUndefined();
             }
             TryCatch try_catch;
-            task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+            task->cb->Call(1, argv);
             if (try_catch.HasCaught()) {
                 FatalException(try_catch);
             }
-            return scope.Close(Undefined());
+            return NanUndefined();
         }
 
         const char* _jb_error_msg() {
@@ -1667,30 +1676,29 @@ finish:
     public:
 
         static void Init(Handle<Object> target) {
-            HandleScope scope;
+            NanScope();
 
             //Symbols
-            sym_large = NODE_PSYMBOL("large");
-            sym_compressed = NODE_PSYMBOL("compressed");
-            sym_records = NODE_PSYMBOL("records");
-            sym_cachedrecords = NODE_PSYMBOL("cachedrecords");
-            sym_explain = NODE_PSYMBOL("$explain");
-            sym_merge = NODE_PSYMBOL("$merge");
+            NanAssignPersistent(sym_large, NanNew<String>("large"));
+            NanAssignPersistent(sym_compressed, NanNew<String>("compressed"));
+            NanAssignPersistent(sym_records, NanNew<String>("records"));
+            NanAssignPersistent(sym_cachedrecords, NanNew<String>("cachedrecords"));
+            NanAssignPersistent(sym_explain, NanNew<String>("$explain"));
+            NanAssignPersistent(sym_merge, NanNew<String>("$merge"));
 
-            sym_name = NODE_PSYMBOL("name");
-            sym_iname = NODE_PSYMBOL("iname");
-            sym_field = NODE_PSYMBOL("field");
-            sym_indexes = NODE_PSYMBOL("indexes");
-            sym_options = NODE_PSYMBOL("options");
-            sym_file = NODE_PSYMBOL("file");
-            sym_buckets = NODE_PSYMBOL("buckets");
-            sym_type = NODE_PSYMBOL("type");
+            NanAssignPersistent(sym_name, NanNew<String>("name"));
+            NanAssignPersistent(sym_iname, NanNew<String>("iname"));
+            NanAssignPersistent(sym_field, NanNew<String>("field"));
+            NanAssignPersistent(sym_indexes, NanNew<String>("indexes"));
+            NanAssignPersistent(sym_options, NanNew<String>("options"));
+            NanAssignPersistent(sym_file, NanNew<String>("file"));
+            NanAssignPersistent(sym_buckets, NanNew<String>("buckets"));
+            NanAssignPersistent(sym_type, NanNew<String>("type"));
 
 
-            Local<FunctionTemplate> t = FunctionTemplate::New(s_new_object);
-            constructor_template = Persistent<FunctionTemplate>::New(t);
-            constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-            constructor_template->SetClassName(String::NewSymbol("NodeEJDB"));
+            Local<FunctionTemplate> t = NanNew<FunctionTemplate>(s_new_object);
+            t->InstanceTemplate()->SetInternalFieldCount(1);
+            t->SetClassName(NanNew<String>("NodeEJDB"));
 
             //Open mode
             NODE_DEFINE_CONSTANT(target, JBOREADER);
@@ -1714,24 +1722,26 @@ finish:
             //Misc
             NODE_DEFINE_CONSTANT(target, JBQRYCOUNT);
 
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "open", s_open);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", s_close);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "save", s_save);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "load", s_load);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "remove", s_remove);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "query", s_query);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "lastError", s_ecode);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "ensureCollection", s_ensure_collection);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "removeCollection", s_rm_collection);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "isOpen", s_is_open);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "setIndex", s_set_index);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "sync", s_sync);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "dbMeta", s_db_meta);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "command", s_cmd);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "_txctl", s_coll_txctl);
+            NODE_SET_PROTOTYPE_METHOD(t, "open", s_open);
+            NODE_SET_PROTOTYPE_METHOD(t, "close", s_close);
+            NODE_SET_PROTOTYPE_METHOD(t, "save", s_save);
+            NODE_SET_PROTOTYPE_METHOD(t, "load", s_load);
+            NODE_SET_PROTOTYPE_METHOD(t, "remove", s_remove);
+            NODE_SET_PROTOTYPE_METHOD(t, "query", s_query);
+            NODE_SET_PROTOTYPE_METHOD(t, "lastError", s_ecode);
+            NODE_SET_PROTOTYPE_METHOD(t, "ensureCollection", s_ensure_collection);
+            NODE_SET_PROTOTYPE_METHOD(t, "removeCollection", s_rm_collection);
+            NODE_SET_PROTOTYPE_METHOD(t, "isOpen", s_is_open);
+            NODE_SET_PROTOTYPE_METHOD(t, "setIndex", s_set_index);
+            NODE_SET_PROTOTYPE_METHOD(t, "sync", s_sync);
+            NODE_SET_PROTOTYPE_METHOD(t, "dbMeta", s_db_meta);
+            NODE_SET_PROTOTYPE_METHOD(t, "command", s_cmd);
+            NODE_SET_PROTOTYPE_METHOD(t, "_txctl", s_coll_txctl);
 
             //Symbols
-            target->Set(String::NewSymbol("NodeEJDB"), constructor_template->GetFunction());
+            target->Set(NanNew<String>("NodeEJDB"), t->GetFunction());
+            
+            NanAssignPersistent(constructor_template, t);
         }
 
         void Ref() {
@@ -1759,87 +1769,87 @@ finish:
         int m_pos; //current cursor position
         bool m_no_next; //no next() was called
 
-        static Handle<Value> s_new_object(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_new_object) {
+            NanEscapableScope();
             REQ_ARGS(2);
             REQ_EXT_ARG(0, nejedb);
             REQ_EXT_ARG(1, rs);
             NodeEJDBCursor *cursor = new NodeEJDBCursor((NodeEJDB*) nejedb->Value(), (TCLIST*) rs->Value());
             cursor->Wrap(args.This());
-            return scope.Close(args.This());
+            NanReturnThis();
         }
 
-        static Handle<Value> s_close(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_close) {
+            NanEscapableScope();
             NodeEJDBCursor *c = ObjectWrap::Unwrap< NodeEJDBCursor > (args.This());
             c->close();
-            return scope.Close(Undefined());
+            NanReturnUndefined();
         }
 
-        static Handle<Value> s_reset(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_reset) { 
+            NanEscapableScope();
             NodeEJDBCursor *c = ObjectWrap::Unwrap< NodeEJDBCursor > (args.This());
             c->m_pos = 0;
             c->m_no_next = true;
-            return scope.Close(Undefined());
+            NanReturnUndefined();
         }
 
-        static Handle<Value> s_has_next(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_has_next) { 
+            NanEscapableScope();
             NodeEJDBCursor *c = ObjectWrap::Unwrap< NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return ThrowException(Exception::Error(String::New("Cursor closed")));
+                return NanThrowError(NanError("Cursor closed"));
             }
             int rsz = TCLISTNUM(c->m_rs);
-            return scope.Close(Boolean::New(c->m_rs && ((c->m_no_next && rsz > 0) || (c->m_pos + 1 < rsz))));
+            NanReturnValue(NanNew<Boolean>(c->m_rs && ((c->m_no_next && rsz > 0) || (c->m_pos + 1 < rsz))));
         }
 
-        static Handle<Value> s_next(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_next) {
+            NanEscapableScope();
             NodeEJDBCursor *c = ObjectWrap::Unwrap< NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return ThrowException(Exception::Error(String::New("Cursor closed")));
+                return NanThrowError(NanError("Cursor closed"));
             }
             int rsz = TCLISTNUM(c->m_rs);
             if (c->m_no_next) {
                 c->m_no_next = false;
-                return scope.Close(Boolean::New(rsz > 0));
+                NanReturnValue(NanNew<Boolean>(rsz > 0));
             } else if (c->m_pos + 1 < rsz) {
                 c->m_pos++;
-                return scope.Close(Boolean::New(true));
+                NanReturnValue(NanTrue());
             } else {
-                return scope.Close(Boolean::New(false));
+                NanReturnValue(NanFalse());
             }
         }
 
-        static Handle<Value> s_get_length(Local<String> property, const AccessorInfo &info) {
-            HandleScope scope;
-            NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (info.This());
+        static NAN_GETTER(s_get_length) { 
+            NanEscapableScope();
+            NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return ThrowException(Exception::Error(String::New("Cursor closed")));
+                return NanThrowError(NanError("Cursor closed"));
             }
-            return scope.Close(Integer::New(TCLISTNUM(c->m_rs)));
+            NanReturnValue(NanNew<Integer>(TCLISTNUM(c->m_rs)));
         }
 
-        static Handle<Value> s_get_pos(Local<String> property, const AccessorInfo &info) {
-            HandleScope scope;
-            NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (info.This());
+        static NAN_GETTER(s_get_pos) {
+            NanEscapableScope();
+            NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return ThrowException(Exception::Error(String::New("Cursor closed")));
+                return NanThrowError(NanError("Cursor closed"));
             }
-            return scope.Close(Integer::New(c->m_pos));
+            NanReturnValue(NanNew<Integer>(c->m_pos));
         }
 
-        static void s_set_pos(Local<String> property, Local<Value> val, const AccessorInfo &info) {
-            HandleScope scope;
-            if (!val->IsNumber()) {
+        static NAN_SETTER(s_set_pos) { 
+            NanEscapableScope();
+            if (!value->IsNumber()) {
                 return;
             }
-            NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (info.This());
+            NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
                 return;
             }
-            int nval = val->Int32Value();
+            int nval = value->Int32Value();
             int rsz = TCLISTNUM(c->m_rs);
             if (nval < 0) {
                 nval = rsz + nval;
@@ -1853,18 +1863,18 @@ finish:
             c->m_no_next = false;
         }
 
-        static Handle<Value> s_field(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_field) { 
+            NanEscapableScope();
             REQ_ARGS(1);
             REQ_STR_ARG(0, fpath);
             NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Cursor closed"))));
+                return NanThrowError(NanError("Cursor closed"));
             }
             int pos = c->m_pos;
             int rsz = TCLISTNUM(c->m_rs);
             if (rsz == 0) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Empty cursor"))));
+                return NanThrowError(NanError("Empty cursor"));
             }
             assert(!(pos < 0 || pos >= rsz)); //m_pos correctly set by s_set_pos
             const void *bsdata = TCLISTVALPTR(c->m_rs, pos);
@@ -1873,28 +1883,29 @@ finish:
             bson_iterator_from_buffer(&it, (const char*) bsdata);
             bson_type bt = bson_find_fieldpath_value2(*fpath, fpath.length(), &it);
             if (bt == BSON_EOO) {
-                return scope.Close(Undefined());
+                NanReturnUndefined();
             }
-            return scope.Close(toV8Value(&it));
+            NanReturnValue(toV8Value(&it));
         }
 
-        static Handle<Value> s_object(const Arguments& args) {
-            HandleScope scope;
+        static NAN_METHOD(s_object) {
+            NanEscapableScope();
             NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Cursor closed"))));
+                return NanThrowError(NanError("Cursor closed"));
             }
             int pos = c->m_pos;
             int rsz = TCLISTNUM(c->m_rs);
             if (rsz == 0) {
-                return scope.Close(ThrowException(Exception::Error(String::New("Empty cursor"))));
+                return NanThrowError(NanError("Empty cursor"));
             }
             assert(!(pos < 0 || pos >= rsz)); //m_pos correctly set by s_set_pos
             const void *bsdata = TCLISTVALPTR(c->m_rs, pos);
             assert(bsdata);
             bson_iterator it;
             bson_iterator_from_buffer(&it, (const char*) bsdata);
-            return scope.Close(toV8Object(&it, BSON_OBJECT));
+            
+            NanReturnValue(toV8Object(&it, BSON_OBJECT));
         }
 
         void close() {
@@ -1906,7 +1917,7 @@ finish:
                 tclistdel(m_rs);
                 m_rs = NULL;
             }
-            V8::AdjustAmountOfExternalAllocatedMemory(-m_mem + sizeof (NodeEJDBCursor));
+            NanAdjustExternalMemory(-m_mem + sizeof (NodeEJDBCursor));
         }
 
         NodeEJDBCursor(NodeEJDB *_nejedb, TCLIST *_rs) : m_nejdb(_nejedb), m_rs(_rs), m_pos(0), m_no_next(true) {
@@ -1922,38 +1933,35 @@ finish:
                 if (i > 0) {
                     m_mem += (intptr_t) (((double) cmem / i) * TCLISTNUM(m_rs));
                 }
-                V8::AdjustAmountOfExternalAllocatedMemory(m_mem);
+                NanAdjustExternalMemory(m_mem);
             }
         }
 
         virtual ~NodeEJDBCursor() {
             close();
-            V8::AdjustAmountOfExternalAllocatedMemory((int)sizeof (NodeEJDBCursor) * -1);
+            NanAdjustExternalMemory((int)sizeof (NodeEJDBCursor) * -1);
         }
 
     public:
 
         static void Init(Handle<Object> target) {
-            HandleScope scope;
-            Local<FunctionTemplate> t = FunctionTemplate::New(s_new_object);
-            constructor_template = Persistent<FunctionTemplate>::New(t);
-            constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-            constructor_template->SetClassName(String::NewSymbol("NodeEJDBCursor"));
+            NanScope();
 
-            constructor_template->PrototypeTemplate()
-                    ->SetAccessor(String::NewSymbol("length"), s_get_length, 0, Handle<Value > (), ALL_CAN_READ);
+            Local<FunctionTemplate> t = NanNew<FunctionTemplate>(s_new_object);
+            t->InstanceTemplate()->SetInternalFieldCount(1);
+            t->SetClassName(NanNew<String>("NodeEJDBCursor"));
 
-            constructor_template->PrototypeTemplate()
-                    ->SetAccessor(String::NewSymbol("pos"), s_get_pos, s_set_pos, Handle<Value > (), ALL_CAN_READ);
+            t->PrototypeTemplate()->SetAccessor(NanNew<String>("length"), s_get_length, 0, Handle<Value > (), ALL_CAN_READ);
+            t->PrototypeTemplate()->SetAccessor(NanNew<String>("pos"), s_get_pos, s_set_pos, Handle<Value > (), ALL_CAN_READ);
 
-
-
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "close", s_close);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "reset", s_reset);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "hasNext", s_has_next);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "next", s_next);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "field", s_field);
-            NODE_SET_PROTOTYPE_METHOD(constructor_template, "object", s_object);
+            NODE_SET_PROTOTYPE_METHOD(t, "close", s_close);
+            NODE_SET_PROTOTYPE_METHOD(t, "reset", s_reset);
+            NODE_SET_PROTOTYPE_METHOD(t, "hasNext", s_has_next);
+            NODE_SET_PROTOTYPE_METHOD(t, "next", s_next);
+            NODE_SET_PROTOTYPE_METHOD(t, "field", s_field);
+            NODE_SET_PROTOTYPE_METHOD(t, "object", s_object);
+            
+            NanAssignPersistent(constructor_template, t);
         }
 
         void Ref() {
@@ -1965,61 +1973,60 @@ finish:
         }
     };
 
-    Persistent<FunctionTemplate> NodeEJDB::constructor_template;
-    Persistent<FunctionTemplate> NodeEJDBCursor::constructor_template;
-
     ///////////////////////////////////////////////////////////////////////////
     //                           rest                                        //
     ///////////////////////////////////////////////////////////////////////////
 
     Handle<Value> NodeEJDB::query_after(BSONQCmdTask *task) {
-        HandleScope scope;
+        NanEscapableScope();
         BSONQCmdData *cmdata = task->cmd_data;
         assert(cmdata);
 
         Local<Value> argv[4];
         if (task->cmd_ret != 0) { //error case
-            if (task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined()) {
-                return scope.Close(ThrowException(Exception::Error(String::New(task->cmd_ret_msg.c_str()))));
+            if (task->cb->IsEmpty()) {
+                NanThrowError(NanError(task->cmd_ret_msg.c_str()));
+                return NanUndefined();
             } else {
-                argv[0] = Exception::Error(String::New(task->cmd_ret_msg.c_str()));
+                argv[0] = NanError(task->cmd_ret_msg.c_str());
                 TryCatch try_catch;
-                task->cb->Call(Context::GetCurrent()->Global(), 1, argv);
+                task->cb->Call(1, argv);
                 if (try_catch.HasCaught()) {
                     FatalException(try_catch);
                 }
-                return scope.Close(Undefined());
+                return NanUndefined();
             }
         }
         TCLIST *res = cmdata->res;
-        argv[0] = Local<Primitive>::New(Null());
+        argv[0] = NanNull();
         if (res) {
             cmdata->res = NULL; //res will be freed by NodeEJDBCursor instead of ~BSONQCmdData()
             Local<Value> cursorArgv[2];
-            cursorArgv[0] = External::New(task->wrapped);
-            cursorArgv[1] = External::New(res);
-            Local<Value> cursor(NodeEJDBCursor::constructor_template->GetFunction()->NewInstance(2, cursorArgv));
+            cursorArgv[0] = NanNew<External>(task->wrapped);
+            cursorArgv[1] = NanNew<External>(res);
+            Local<Value> cursor(NanNew(NodeEJDBCursor::constructor_template)->GetFunction()->NewInstance(2, cursorArgv));
             argv[1] = cursor;
         } else { //this is update query so no result set
-            argv[1] = Local<Primitive>::New(Null());
+            argv[1] = NanNull();
         }
-        argv[2] = Integer::New(cmdata->count);
+        argv[2] = NanNew<Integer>(cmdata->count);
         if (cmdata->log) {
-            argv[3] = String::New((const char*) tcxstrptr(cmdata->log));
+            argv[3] = NanNew<String>((const char*) tcxstrptr(cmdata->log));
         }
-        if (task->cb.IsEmpty() || task->cb->IsNull() || task->cb->IsUndefined()) {
+        
+        if (task->cb->IsEmpty()) {
             if (res) {
-                return scope.Close(argv[1]); //cursor
+                return NanEscapeScope(argv[1]); //cursor
             } else {
-                return scope.Close(argv[2]); //count
+                return NanEscapeScope(argv[2]); //count
             }
         } else {
             TryCatch try_catch;
-            task->cb->Call(Context::GetCurrent()->Global(), (cmdata->log) ? 4 : 3, argv);
+            task->cb->Call((cmdata->log) ? 4 : 3, argv);
             if (try_catch.HasCaught()) {
                 FatalException(try_catch);
             }
-            return scope.Close(Undefined());
+            return NanUndefined();
         }
     }
 
@@ -2030,6 +2037,9 @@ finish:
         ejdb::NodeEJDB::Init(target);
         ejdb::NodeEJDBCursor::Init(target);
 }
+
+Persistent<FunctionTemplate> NodeEJDB::constructor_template;
+Persistent<FunctionTemplate> NodeEJDBCursor::constructor_template;
 
 }
 
