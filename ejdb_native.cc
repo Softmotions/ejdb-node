@@ -1847,7 +1847,7 @@ finish:
             }
             NodeEJDBCursor *c = ObjectWrap::Unwrap<NodeEJDBCursor > (args.This());
             if (!c->m_rs) {
-                NanReturnUndefined();
+                return;
             }
             int nval = value->Int32Value();
             int rsz = TCLISTNUM(c->m_rs);
@@ -1861,8 +1861,6 @@ finish:
             }
             c->m_pos = nval;
             c->m_no_next = false;
-            
-            NanReturnUndefined();
         }
 
         static NAN_METHOD(s_field) { 
