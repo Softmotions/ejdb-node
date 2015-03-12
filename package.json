@@ -34,7 +34,8 @@
         "node" : "0.8.x || 0.10.x || 0.12.x" 
     },
     "dependencies" : {
-        "nodeunit" : ">=0.7.0"
+        "nodeunit" : ">=0.7.0",
+        "nan" : ">=1.7.0"
     },
     "scripts" : {
         "preinstall" : "node platform.js preinstall",
