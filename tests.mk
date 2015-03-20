@@ -1,6 +1,6 @@
 
 check: | var
-	make -C ./ejdb/tcejdb check-ejdb
+#	-- make -C ./ejdb/tcejdb check-ejdb
 	nodeunit ./tests
 
 var: ;mkdir -p var
