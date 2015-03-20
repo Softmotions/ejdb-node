@@ -30,7 +30,7 @@
                  '_UNICODE',
                ],
                'libraries': [
-                 '-l<(EJDB_HOME)/lib/tcejdbdll.lib'
+                 '-l<(EJDB_HOME)/lib/ejdbdll.lib'
                ],
             }, {
                'defines': [
@@ -45,8 +45,8 @@
                 'cflags': [ '-Wall', '-pedantic', '-fsigned-char', '-pthread', '-Wno-variadic-macros'],
                 'cflags_cc!' : [ '-fno-exceptions' ],
                 'libraries' : [
-                    '-L../ejdb/tcejdb',
-                    '-Wl,-Bstatic -ltcejdb',
+                    '-L../build-ejdb/src',
+                    '-Wl,-Bstatic -lejdb-1',
                     '-Wl,-Bdynamic',
                     '-lz -lpthread -lm -lc'
                 ]
@@ -62,12 +62,12 @@
                     'OTHER_LDFLAGS': [
                         '-Wl,-search_paths_first',
                         '-L./ejdb/tcejdb/static',
-                        '-lstcejdb -lz -lpthread -lm -lc'
+                        '-lsejdb -lz -lpthread -lm -lc'
                     ]
                 }
            }]
         ],
-        'include_dirs' : ['ejdb/tcejdb', '<!(node -e "require(\'nan\')")'],
+        'include_dirs' : ['build-ejdb/libejdb/include/ejdb', '<!(node -e "require(\'nan\')")'],
     },
 
     'targets' : [
