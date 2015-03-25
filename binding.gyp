@@ -30,7 +30,7 @@
                  '_UNICODE',
                ],
                'libraries': [
-                 '-l<(EJDB_HOME)/lib/tcejdbdll.lib'
+                 '-l<(EJDB_HOME)/lib/libejdb.lib'
                ],
             }, {
                'defines': [

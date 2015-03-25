@@ -3,7 +3,7 @@ var exec = require("child_process").exec;
 var spawn = require("child_process").spawn;
 var fs = require("fs");
 var path = require("path");
-var http = require("http");
+var https = require("https");
 var util = require("util");
 var os = require("os");
 
@@ -89,7 +89,7 @@ function win() {
             if (!zfileExist) {
                 console.log("Downloading windows binaries from: %s ...", dlurl);
                 console.log("File: %s", zfile);
-                var req = http.get(dlurl, function(res) {
+                var req = https.get(dlurl, function(res) {
                     if (res.statusCode !== 200) {
                         console.log("Invalid response code %d", res.statusCode);
                         process.exit(1);
@@ -142,9 +142,9 @@ function win() {
                     process.exit(1);
                 });
                 ng.on("close", exithandler("node-gyp", function() {
-                    copyFile(path.join(sdir, "lib/tcejdbdll.dll"),
-                            "build/Release/tcejdbdll.dll",
-                            exithandler("copy tcejdbdll.dll"));
+                    copyFile(path.join(sdir, "bin/libejdb.dll"),
+                            "build/Release/libejdb.dll",
+                            exithandler("copy libejdb.dll"));
                 }));
             }
         }
