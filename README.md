@@ -505,7 +505,5 @@ To install nodejs ejdb binding you need:
 
  Then start MSVC cmd window and run:
 
-    npm install .
-
-
+    `npm install .`
 
