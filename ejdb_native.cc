@@ -14,10 +14,7 @@
  *  Boston, MA 02111-1307 USA.
  *************************************************************************************************/
 
-#include <v8.h>
-#include <node.h>
-#include <node_buffer.h>
-#include <node_object_wrap.h>
+#include <nan.h>
 #include <ejdb_private.h>
 
 #include "ejdb_args.h"

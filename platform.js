@@ -122,30 +122,37 @@ function win() {
             }
 
             function processArchive() {
-                var AdmZip = require("adm-zip");
+                var targz = require("tar.gz");
                 console.log("Unzip archive '%s'", zfile);
-                var azip = new AdmZip(zfile);
-                azip.extractAllTo(sdir, true);
-                sdir = path.resolve(sdir);
+                var tgz = new targz();
+                tgz.extract(zfile, sdir, function(err){
+                    if (err) {
+                        console.log(err);
+                        process.exit(1);
+                        return;
+                    }
 
-                var config = {};
-                config["variables"] = {
-                    "EJDB_HOME" : sdir
-                };
-                fs.writeFileSync("configure.gypi", JSON.stringify(config));
+                    sdir = path.resolve(sdir);
 
-                var args = ["configure", "rebuild"];
-                console.log("node-gyp %j", args);
-                var ng = spawn("node-gyp.cmd", args, {stdio : "inherit"});
-                ng.on("error", function(ev) {
-                    console.log("Spawn error: " + ev);
-                    process.exit(1);
+                    var config = {};
+                    config["variables"] = {
+                        "EJDB_HOME" : sdir
+                    };
+                    fs.writeFileSync("configure.gypi", JSON.stringify(config));
+
+                    var args = ["configure", "rebuild"];
+                    console.log("node-gyp %j", args);
+                    var ng = spawn("node-gyp.cmd", args, {stdio : "inherit"});
+                    ng.on("error", function(ev) {
+                        console.log("Spawn error: " + ev);
+                        process.exit(1);
+                    });
+                    ng.on("close", exithandler("node-gyp", function() {
+                        copyFile(path.join(sdir, "bin/libejdb.dll"),
+                                "build/Release/libejdb.dll",
+                                exithandler("copy libejdb.dll"));
+                    }));
                 });
-                ng.on("close", exithandler("node-gyp", function() {
-                    copyFile(path.join(sdir, "bin/libejdb.dll"),
-                            "build/Release/libejdb.dll",
-                            exithandler("copy libejdb.dll"));
-                }));
             }
         }
     }
