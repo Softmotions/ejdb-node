@@ -7,6 +7,7 @@ Installation
 
 * g++
 * zlib
+* cmake >= 2.8.12
 
 On Debian/Ubuntu linux you can install it as follows:
 
@@ -16,7 +17,7 @@ sudo apt-get install g++ zlib1g zlib1g-dev
 
 **Installation from node package manager on linux/macos:**
 
-    npm install ejdb
+    npm install .
 
 **[Installing EJDB NodeJS module on windows](#windows-ejdb-node-module-installation)**
 
@@ -499,12 +500,12 @@ Windows EJDB Node module installation
 To install nodejs ejdb binding you need:
 
  * MSVC 2010 express edition
- * Installed node v0.8.x or v0.10.x
- * Manually installed `npm install adm-zip` package  (because it needed during installation process)
+ * Installed node v0.8.x or v0.10.x or 0.12.x
+ * Manually installed `npm install tar.gz nan` package  (because it needed during installation process)
 
  Then start MSVC cmd window and run:
 
-    npm install ejdb
+    npm install .
 
 
 
