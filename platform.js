@@ -3,7 +3,7 @@ var exec = require("child_process").exec;
 var spawn = require("child_process").spawn;
 var fs = require("fs");
 var path = require("path");
-var http = require("http");
+var https = require("https");
 var util = require("util");
 var os = require("os");
 
@@ -89,7 +89,7 @@ function win() {
             if (!zfileExist) {
                 console.log("Downloading windows binaries from: %s ...", dlurl);
                 console.log("File: %s", zfile);
-                var req = http.get(dlurl, function(res) {
+                var req = https.get(dlurl, function(res) {
                     if (res.statusCode !== 200) {
                         console.log("Invalid response code %d", res.statusCode);
                         process.exit(1);
@@ -122,30 +122,37 @@ function win() {
             }
 
             function processArchive() {
-                var AdmZip = require("adm-zip");
+                var targz = require("tar.gz");
                 console.log("Unzip archive '%s'", zfile);
-                var azip = new AdmZip(zfile);
-                azip.extractAllTo(sdir, true);
-                sdir = path.resolve(sdir);
+                var tgz = new targz();
+                tgz.extract(zfile, sdir, function(err){
+                    if (err) {
+                        console.log(err);
+                        process.exit(1);
+                        return;
+                    }
 
-                var config = {};
-                config["variables"] = {
-                    "EJDB_HOME" : sdir
-                };
-                fs.writeFileSync("configure.gypi", JSON.stringify(config));
+                    sdir = path.resolve(sdir);
 
-                var args = ["configure", "rebuild"];
-                console.log("node-gyp %j", args);
-                var ng = spawn("node-gyp.cmd", args, {stdio : "inherit"});
-                ng.on("error", function(ev) {
-                    console.log("Spawn error: " + ev);
-                    process.exit(1);
+                    var config = {};
+                    config["variables"] = {
+                        "EJDB_HOME" : sdir
+                    };
+                    fs.writeFileSync("configure.gypi", JSON.stringify(config));
+
+                    var args = ["configure", "rebuild"];
+                    console.log("node-gyp %j", args);
+                    var ng = spawn("node-gyp.cmd", args, {stdio : "inherit"});
+                    ng.on("error", function(ev) {
+                        console.log("Spawn error: " + ev);
+                        process.exit(1);
+                    });
+                    ng.on("close", exithandler("node-gyp", function() {
+                        copyFile(path.join(sdir, "bin/libejdb.dll"),
+                                "build/Release/libejdb.dll",
+                                exithandler("copy libejdb.dll"));
+                    }));
                 });
-                ng.on("close", exithandler("node-gyp", function() {
-                    copyFile(path.join(sdir, "lib/tcejdbdll.dll"),
-                            "build/Release/tcejdbdll.dll",
-                            exithandler("copy tcejdbdll.dll"));
-                }));
             }
         }
     }

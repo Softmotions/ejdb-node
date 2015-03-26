@@ -14,6 +14,10 @@
  *  Boston, MA 02111-1307 USA.
  *************************************************************************************************/
 
+#if _MSC_VER > 1000
+#pragma once
+#endif // _MSC_VER > 1000
+
 #ifndef EJDB_CMD_H
 #define	EJDB_CMD_H
 
