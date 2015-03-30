@@ -1,4 +1,5 @@
 all:
+	mkdir -p ./var
 	npm build .
 
 clean:

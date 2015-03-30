@@ -61,8 +61,8 @@
                         ],
                     'OTHER_LDFLAGS': [
                         '-Wl,-search_paths_first',
-                        '-L./ejdb/tcejdb/static',
-                        '-lsejdb -lz -lpthread -lm -lc'
+                        '-Lbuild-ejdb/src',
+                        '-lejdb-1 -lz -lpthread -lm -lc'
                     ]
                 }
            }]
