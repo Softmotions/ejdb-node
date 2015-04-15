@@ -1,6 +1,6 @@
 {
     "name" : "ejdb",
-    "version" : "1.2.5-1",
+    "version" : "1.2.6-1",
     "config" : {
         "windownloadurl_ia32" : "https://dl.dropboxusercontent.com/u/4709222/ejdb/ejdb-1.2.4-Release-Windows-x86.tar.gz",
         "windownloadurl_x64" : "https://dl.dropboxusercontent.com/u/4709222/ejdb/ejdb-1.2.4-Release-Windows-x86_64.tar.gz"
