@@ -32,6 +32,7 @@
                'libraries': [
                  '-l<(EJDB_HOME)/lib/libejdb.lib'
                ],
+               'include_dirs' : ['ejdbdll/include/ejdb', '<!(node -e "require(\'nan\')")']
             }, {
                'defines': [
                  '_LARGEFILE_SOURCE',
