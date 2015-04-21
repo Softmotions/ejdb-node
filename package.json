@@ -1,6 +1,6 @@
 {
     "name" : "ejdb",
-    "version" : "1.2.6-2",
+    "version" : "1.2.6-3",
     "config" : {
         "windownloadurl_ia32" : "https://dl.dropboxusercontent.com/u/4709222/ejdb/ejdb-1.2.6-Release-Windows-x86.tar.gz",
         "windownloadurl_x64" : "https://dl.dropboxusercontent.com/u/4709222/ejdb/ejdb-1.2.6-Release-Windows-x86_64.tar.gz"
@@ -39,9 +39,8 @@
     },
     "devDependencies" : {
         "nan" : ">=1.7.0",
-        "tar.gz" : ""
+        "tar.gz" : ">=0.1.1"
     },
-    "bundledDependencies" : ["node-pre-gyp"],
     "scripts" : {
         "install" : "node-pre-gyp install --silent || node platform.js preinstall",
         "test" : "node platform.js test"
@@ -52,7 +51,8 @@
     "binary" : {
         "module_name" : "ejdb_native",
         "module_path" : "./lib/",
-        "host" : "https://github.com/Softmotions/ejdb-node/releases/lastest"
+        "host" : "https://github.com/",
+        "remote_path" : "/Softmotions/ejdb-node/releases/download/v{version}"
     },
     "author" : {
         "name" : "Anton Adamansky",
