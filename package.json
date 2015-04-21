@@ -35,14 +35,21 @@
     },
     "dependencies" : {
         "nodeunit" : ">=0.7.0",
-        "nan" : ">=1.7.0"
+        "nan" : ">=1.7.0",
+        "node-pre-gyp" : ">=0.6.4"
     },
+    "bundledDependencies" : ["node-pre-gyp"],
     "scripts" : {
         "preinstall" : "node platform.js preinstall",
         "test" : "node platform.js test"
     },
     "bin" : {
         "ejdb" : "bin/cli.js"
+    },
+    "binary" : {
+        "module_name" : "ejdb_native",
+        "module_path" : "./lib/",
+        "host" : "https://github.com/Softmotions/ejdb-node/releases/lastest"
     },
     "author" : {
         "name" : "Anton Adamansky",

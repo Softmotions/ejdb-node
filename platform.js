@@ -149,7 +149,7 @@ function win() {
                     });
                     ng.on("close", exithandler("node-gyp", function() {
                         copyFile(path.join(sdir, "bin/libejdb.dll"),
-                                "build/Release/libejdb.dll",
+                                "lib/libejdb.dll",
                                 exithandler("copy libejdb.dll"));
                     }));
                 });

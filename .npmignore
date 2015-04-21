@@ -38,6 +38,7 @@
 /misc
 /tests/bench
 /nbproject
+/lib
 .idea
 .clang/
 .codelite/

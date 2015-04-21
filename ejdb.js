@@ -14,13 +14,11 @@
  *  Boston, MA 02111-1307 USA.
  *************************************************************************************************/
 
-var ejdblib;
-try {
-    ejdblib = require("./build/Release/ejdb_native.node");
-} catch (e) {
-    ejdblib = require("./build/Debug/ejdb_native.node");
-    console.error("Warning: Using the DEBUG version of EJDB nodejs binding");
-}
+var binary = require('node-pre-gyp');
+var path = require('path');
+var ejdblib_path = binary.find(path.resolve(path.join(__dirname,'./package.json')));
+var ejdblib = require(ejdblib_path);
+
 var EJDBImpl = ejdblib.NodeEJDB;
 
 const DEFAULT_OPEN_MODE = (ejdblib.JBOWRITER | ejdblib.JBOCREAT);

@@ -73,11 +73,22 @@
 
     'targets' : [
         {
+            "target_name" : "action_after_build",
+            "type" : "none",
+            "dependencies" : ["ejdb_native"],
+            "copies" : [
+                {
+                    "files" : ["<(PRODUCT_DIR)/ejdb_native.node"],
+                    "destination" : "./lib/"
+                }
+            ]
+        },
+        {
             'target_name' : 'ejdb_native',
             'sources' : [
                 'ejdb_native.cc',
                 'ejdb_logging.cc'
             ]
-        },
+        }
     ]
 }
