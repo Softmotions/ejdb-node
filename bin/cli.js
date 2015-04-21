@@ -225,6 +225,9 @@ var colctl = function (db, cname) {
 
     // collection controller impl
     var colctlimpl = {
+        inspect : function() {
+            return '\u001b[' + 36 + 'm' + "[Collection]" + '\u001b[' + 39 + 'm';
+        }
     };
 
     var mname;
