@@ -39,7 +39,8 @@
     },
     "devDependencies" : {
         "nan" : ">=1.7.0",
-        "tar.gz" : ">=0.1.1"
+        "tar.gz" : ">=0.1.1",
+        "aws-sdk" : ""
     },
     "scripts" : {
         "install" : "node-pre-gyp install --silent || node platform.js preinstall",
@@ -51,8 +52,7 @@
     "binary" : {
         "module_name" : "ejdb_native",
         "module_path" : "./lib/",
-        "host" : "https://github.com/",
-        "remote_path" : "/Softmotions/ejdb-node/releases/download/v{version}"
+        "host" : "https://ejdbnode.s3.amazonaws.com/"
     },
     "author" : {
         "name" : "Anton Adamansky",
