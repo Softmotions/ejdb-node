@@ -35,12 +35,15 @@
     },
     "dependencies" : {
         "nodeunit" : ">=0.7.0",
-        "nan" : ">=1.7.0",
         "node-pre-gyp" : ">=0.6.4"
+    },
+    "devDependencies" : {
+        "nan" : ">=1.7.0",
+        "tar.gz" : ""
     },
     "bundledDependencies" : ["node-pre-gyp"],
     "scripts" : {
-        "preinstall" : "node platform.js preinstall",
+        "install" : "node-pre-gyp install --silent || node platform.js preinstall",
         "test" : "node platform.js test"
     },
     "bin" : {
