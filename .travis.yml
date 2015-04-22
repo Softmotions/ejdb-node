@@ -20,9 +20,6 @@ install:
 after_install:
 - npm test
 
-before_script:
-- node-pre-gyp clean
-
 script:
 - node-pre-gyp package unpublish publish
 - node-pre-gyp clean
