@@ -16,6 +16,8 @@ before_install:
 
 install:
 - npm install --build-from-source
+
+after_install:
 - npm test
 
 before_script:
