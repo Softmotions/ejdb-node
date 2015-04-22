@@ -1,0 +1,29 @@
+language: node_js
+
+node_js:
+  - "0.12"
+  - "0.10"
+  - "0.8"
+
+env:
+  global:
+   - secure: aeo6Pg3hokp+BEaotoqE6L0fW59/bDyIfehU/Aapdozwd1rViHKVfAqUZr6hk9B0yzksDeGwkHg1/5AdqRA0R1VgkOzZdaxdlfoW3wIltEszGjk8LPcVVpQnPigfz4w4VbB5qBe/cVkTZohOdd446VjAZ+IGjKWsSI5NYC69lI8=
+   - secure: ErvlZ2XHm0CKC9PBco3IXma7QWuc9rjeHH4It4a0UbsfPJRlbPLg24EPoH39818X543AniRPJzkqOQJkj6EhAn+lkjGCNlOZAa3A+DlhOP34/zlXRRjKLQC/XoTkMBEk5XwIPXNsISunC6U0b+nsd3zI5GncGeXVy2y5giZMpog=
+   - secure: TxSjKV3ZMBxAkAqpzeWP0i4F+hh8X1EDHgFm3T2Djnngd0C1oaXHUEwuGEa2DNxnzl2kdjOtcMHQpn8T16GtQ2FSIJxAtcsnvB5EuDmBgOjOqwSv84koCJ7OR97/atyqDvJ4b0i8z1K8E1bW8+oa9d6PDIK4Iz7x5aoMrEaviLw=
+
+before_install:
+- export PATH=./node_modules/.bin/:$PATH
+
+install:
+- npm install --build-from-source
+- npm test
+
+before_script:
+- node-pre-gyp clean
+
+script:
+- node-pre-gyp package unpublish publish
+- node-pre-gyp clean
+
+after_success:
+- node-pre-gyp info

@@ -44,3 +44,5 @@
 .codelite/
 ejdb.workspace.session
 compilation.db
+appveyor.yml
+.travis.yml
