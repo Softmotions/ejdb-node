@@ -3,6 +3,7 @@ var exec = require("child_process").exec;
 var spawn = require("child_process").spawn;
 var fs = require("fs");
 var path = require("path");
+var http = require("http");
 var https = require("https");
 var util = require("util");
 var os = require("os");
@@ -89,7 +90,7 @@ function win() {
             if (!zfileExist) {
                 console.log("Downloading windows binaries from: %s ...", dlurl);
                 console.log("File: %s", zfile);
-                var req = https.get(dlurl, function(res) {
+                var req = http.get(dlurl, function(res) {
                     if (res.statusCode !== 200) {
                         console.log("Invalid response code %d", res.statusCode);
                         process.exit(1);
