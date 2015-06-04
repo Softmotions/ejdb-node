@@ -1,9 +1,9 @@
 {
     "name" : "ejdb",
-    "version" : "1.2.6-3",
+    "version" : "1.2.8-1",
     "config" : {
-        "windownloadurl_ia32" : "https://dl.dropboxusercontent.com/u/4709222/ejdb/ejdb-1.2.6-Release-Windows-x86.tar.gz",
-        "windownloadurl_x64" : "https://dl.dropboxusercontent.com/u/4709222/ejdb/ejdb-1.2.6-Release-Windows-x86_64.tar.gz"
+        "windownloadurl_ia32" : "http://softmotions.com/ejdb/archives/ejdb-1.2.8-RelWithDebInfo-Windows-x86.tar.gz",
+        "windownloadurl_x64" : "http://softmotions.com/ejdb/archives/ejdb-1.2.8-RelWithDebInfo-Windows-x86_64.tar.gz"
     },
     "main" : "ejdb.js",
     "homepage" : "http://ejdb.org",
@@ -52,7 +52,8 @@
     "binary" : {
         "module_name" : "ejdb_native",
         "module_path" : "./lib/",
-        "host" : "https://ejdbnode.s3.amazonaws.com/"
+        "host" : "http://softmotions.com/",
+        "remote_path" : "/ejdb-node/"
     },
     "author" : {
         "name" : "Anton Adamansky",
