@@ -52,8 +52,7 @@
     "binary" : {
         "module_name" : "ejdb_native",
         "module_path" : "./lib/",
-        "host" : "http://softmotions.com/",
-        "remote_path" : "/ejdb-node/"
+        "host" : "https://ejdbnode.s3.amazonaws.com/"
     },
     "author" : {
         "name" : "Anton Adamansky",
