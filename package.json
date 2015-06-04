@@ -1,6 +1,6 @@
 {
     "name" : "ejdb",
-    "version" : "1.2.8-1",
+    "version" : "1.2.8-20",
     "config" : {
         "windownloadurl_ia32" : "http://softmotions.com/ejdb/archives/ejdb-1.2.8-RelWithDebInfo-Windows-x86.tar.gz",
         "windownloadurl_x64" : "http://softmotions.com/ejdb/archives/ejdb-1.2.8-RelWithDebInfo-Windows-x86_64.tar.gz"
