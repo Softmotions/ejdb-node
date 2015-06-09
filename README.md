@@ -5,11 +5,11 @@ EJDB NodeJS binding http://ejdb.org
 
 Installation
 -----------------------------------
-http://ejdb.org/doc/bindings/nodejs/index.html
+[http://ejdb.org/doc/bindings/nodejs/index.html](http://ejdb.org/doc/bindings/nodejs/index.html)
 
 API
 -----------------------------------
-http://ejdb.org/doc/bindings/nodejs/api.html
+[http://ejdb.org/doc/bindings/nodejs/api.html](http://ejdb.org/doc/bindings/nodejs/api.html)
 
 One snippet intro
 -----------------------------------
