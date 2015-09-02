@@ -39,7 +39,6 @@
         "node-pre-gyp" : ">=0.6.4"
     },
     "devDependencies" : {
-        "nan" : "^1.9.0",
         "tar.gz" : ">=0.1.1",
         "aws-sdk" : ""
     },
