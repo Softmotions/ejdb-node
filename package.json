@@ -34,11 +34,12 @@
         "node" : "0.8.x || 0.10.x || 0.12.x" 
     },
     "dependencies" : {
+        "nan" : "^1.9.0",
         "nodeunit" : ">=0.7.0",
         "node-pre-gyp" : ">=0.6.4"
     },
     "devDependencies" : {
-        "nan" : ">=1.7.0",
+        "nan" : "^1.9.0",
         "tar.gz" : ">=0.1.1",
         "aws-sdk" : ""
     },
