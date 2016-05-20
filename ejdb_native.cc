@@ -28,6 +28,7 @@
 #include <locale.h>
 #include <stdint.h>
 #include <string.h>
+#include <iostream>
 
 #ifdef _MSC_VER
 #include <unordered_set>
@@ -83,7 +84,7 @@ namespace ejdb {
     };
 
     char* fetch_string_data(Handle<Value> sobj, eFetchStatus* fs, const char* def) {
-        Nan::HandleScope();
+        Nan::HandleScope scope;
         if (sobj->IsNull() || sobj->IsUndefined()) {
             if (fs) {
                 *fs = FETCH_DEFAULT;
@@ -99,7 +100,7 @@ namespace ejdb {
     }
 
     int64_t fetch_int_data(Handle<Value> sobj, eFetchStatus* fs, int64_t def) {
-        Nan::HandleScope();
+        Nan::HandleScope scope;
         if (!(sobj->IsNumber() || sobj->IsInt32() || sobj->IsUint32())) {
             if (fs) {
                 *fs = FETCH_DEFAULT;
@@ -113,7 +114,7 @@ namespace ejdb {
     }
 
     bool fetch_bool_data(Handle<Value> sobj, eFetchStatus* fs, bool def) {
-        Nan::HandleScope();
+        Nan::HandleScope scope;
         if (sobj->IsNull() || sobj->IsUndefined()) {
             if (fs) {
                 *fs = FETCH_DEFAULT;
@@ -127,7 +128,7 @@ namespace ejdb {
     }
 
     double fetch_real_data(Handle<Value> sobj, eFetchStatus* fs, double def) {
-        Nan::HandleScope();
+        Nan::HandleScope scope;
         if (!(sobj->IsNumber() || sobj->IsInt32())) {
             if (fs) {
                 *fs = FETCH_DEFAULT;
@@ -372,7 +373,7 @@ namespace ejdb {
     }
 
     static void toBSON0(Handle<Object> obj, bson *bs, TBSONCTX *ctx) {
-        Nan::HandleScope();
+        Nan::HandleScope scope;
         assert(ctx && obj->IsObject());
         V8ObjSet::iterator it = ctx->tset.find(obj);
         if (it != ctx->tset.end()) {
@@ -474,7 +475,7 @@ namespace ejdb {
 
     /** Convert V8 object into binary json instance. After usage, it must be freed by bson_del() */
     static void toBSON(Handle<Object> obj, bson *bs, bool inquery) {
-        Nan::HandleScope();
+        Nan::HandleScope scope;
         TBSONCTX ctx;
         ctx.inquery = inquery;
         toBSON0(obj, bs, &ctx);
@@ -691,7 +692,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_remove) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             REQ_ARGS(2);
             REQ_STR_ARG(0, cname); //Collection name
             REQ_STR_ARG(1, soid); //String OID
@@ -718,7 +719,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_save) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             REQ_ARGS(3);
             REQ_STR_ARG(0, cname); //Collection name
             REQ_ARR_ARG(1, oarr); //Array of JSON objects
@@ -763,7 +764,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_cmd) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             REQ_ARGS(1);
             REQ_OBJ_ARG(0, cmdobj);
 
@@ -794,7 +795,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_query) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             REQ_ARGS(3);
             REQ_STR_ARG(0, cname)
             REQ_ARR_ARG(1, qarr);
@@ -850,7 +851,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_set_index) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             REQ_ARGS(3);
             REQ_STR_ARG(0, cname)
             REQ_STR_ARG(1, ipath)
@@ -876,7 +877,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_sync) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             NodeEJDB *njb = Nan::ObjectWrap::Unwrap< NodeEJDB > (info.This());
             Local<Function> cb;
             if (info[0]->IsFunction()) {
@@ -895,7 +896,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_db_meta) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             NodeEJDB *njb = Nan::ObjectWrap::Unwrap< NodeEJDB > (info.This());
             if (!ejdbisopen(njb->m_jb)) {
                 return Nan::ThrowError(Nan::Error("Operation on closed EJDB instance"));
@@ -914,7 +915,7 @@ namespace ejdb {
         //transaction control handlers
 
         static NAN_METHOD(s_coll_txctl) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             REQ_STR_ARG(0, cname);
             //operation values:
             //cmdTxBegin = 8, //Begin collection transaction
@@ -950,7 +951,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_ecode) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             NodeEJDB *njb = Nan::ObjectWrap::Unwrap< NodeEJDB > (info.This());
             if (!njb->m_jb) { //not using ejdbisopen()
                 return Nan::ThrowError(Nan::Error("Operation on closed EJDB instance"));
@@ -959,7 +960,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_ensure_collection) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             Local<Function> cb;
             NodeEJDB *njb = Nan::ObjectWrap::Unwrap< NodeEJDB > (info.This());
             REQ_STR_ARG(0, cname);
@@ -994,7 +995,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_rm_collection) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             REQ_STR_ARG(0, cname);
             REQ_VAL_ARG(1, prune);
             REQ_FUN_ARG(2, cb);
@@ -1009,7 +1010,7 @@ namespace ejdb {
         }
 
         static NAN_METHOD(s_is_open) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             NodeEJDB *njb = Nan::ObjectWrap::Unwrap< NodeEJDB > (info.This());
             info.GetReturnValue().Set(Nan::New<Boolean>(ejdbisopen(njb->m_jb)));
         }
@@ -1067,6 +1068,7 @@ namespace ejdb {
         }
 
         void exec_cmd_after(EJBTask *task) {
+            Nan::HandleScope scope;
             int cmd = task->cmd;
             switch (cmd) {
                 case cmdQuery:
@@ -1124,7 +1126,7 @@ namespace ejdb {
         }
 
         void sync_after(EJBTask *task) {
-            Nan::HandleScope();
+            Nan::HandleScope scope;
             Local<Value> argv[1];
             if (task->cb->IsEmpty()) {
                 return;
@@ -1161,7 +1163,7 @@ namespace ejdb {
         }
 
         void set_index_after(SetIndexCmdTask *task) {
-            Nan::HandleScope();
+            Nan::HandleScope scope;
             Local<Value> argv[1];
             if (task->cb->IsEmpty()) {
                 return;
@@ -1191,7 +1193,7 @@ namespace ejdb {
         }
 
         void rm_collection_after(RMCollCmdTask *task) {
-            Nan::HandleScope();
+            Nan::HandleScope scope;
             Local<Value> argv[1];
             if (task->cmd_ret != 0) {
                 argv[0] = Nan::Error(task->cmd_ret_msg.c_str());
@@ -1224,7 +1226,7 @@ namespace ejdb {
         }
 
         Handle<Value> remove_after(BSONCmdTask *task) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             Local<Value> argv[1];
             if (task->cmd_ret != 0) {
                 argv[0] = Nan::Error(task->cmd_ret_msg.c_str());
@@ -1284,7 +1286,7 @@ namespace ejdb {
         }
 
         Handle<Value> txctl_after(TxCmdTask *task) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             TxCmdData *cmdata = task->cmd_data;
             int info = 1;
             Local<Value> argv[2];
@@ -1350,7 +1352,7 @@ namespace ejdb {
         }
 
         Handle<Value> save_after(BSONCmdTask *task) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             Local<Value> argv[2];
             if (task->cmd_ret != 0) {
                 argv[0] = Nan::Error(task->cmd_ret_msg.c_str());
@@ -1403,7 +1405,7 @@ namespace ejdb {
         }
 
         Handle<Value> load_after(BSONCmdTask *task) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             Local<Value> argv[2];
             if (task->cmd_ret != 0) {
                 argv[0] = Nan::Error(task->cmd_ret_msg.c_str());
@@ -1547,7 +1549,7 @@ finish:
         }
 
         Handle<Value> open_after(OpenCmdTask *task) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             Local<Value> argv[1];
             bool sync = task->cb->IsEmpty();
 
@@ -1587,7 +1589,7 @@ finish:
         }
 
         Handle<Value> close_after(EJBTask *task) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             Local<Value> argv[1];
             bool sync = task->cb->IsEmpty();
 
@@ -1625,7 +1627,7 @@ finish:
         }
 
         Handle<Value> ensure_after(EnsureCmdTask *task) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             Local<Value> argv[1];
             bool sync = task->cb->IsEmpty();
 
@@ -1673,7 +1675,7 @@ finish:
     public:
 
         static void Init(Handle<Object> target) {
-            Nan::HandleScope();
+            Nan::HandleScope scope;
 
             //Symbols
             sym_large.Reset( Nan::New<String>("large").ToLocalChecked());
@@ -1767,7 +1769,7 @@ finish:
         bool m_no_next; //no next() was called
 
         static NAN_METHOD(s_new_object) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             REQ_ARGS(2);
             REQ_EXT_ARG(0, nejedb);
             REQ_EXT_ARG(1, rs);
@@ -1777,14 +1779,13 @@ finish:
         }
 
         static NAN_METHOD(s_close) {
-            Nan::EscapableHandleScope scope;;
             NodeEJDBCursor *c = Nan::ObjectWrap::Unwrap< NodeEJDBCursor > (info.This());
             c->close();
             info.GetReturnValue().SetUndefined();
         }
 
         static NAN_METHOD(s_reset) { 
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             NodeEJDBCursor *c = Nan::ObjectWrap::Unwrap< NodeEJDBCursor > (info.This());
             c->m_pos = 0;
             c->m_no_next = true;
@@ -1792,7 +1793,7 @@ finish:
         }
 
         static NAN_METHOD(s_has_next) { 
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             NodeEJDBCursor *c = Nan::ObjectWrap::Unwrap< NodeEJDBCursor > (info.This());
             if (!c->m_rs) {
                 return Nan::ThrowError(Nan::Error("Cursor closed"));
@@ -1802,7 +1803,7 @@ finish:
         }
 
         static NAN_METHOD(s_next) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             NodeEJDBCursor *c = Nan::ObjectWrap::Unwrap< NodeEJDBCursor > (info.This());
             if (!c->m_rs) {
                 return Nan::ThrowError(Nan::Error("Cursor closed"));
@@ -1820,7 +1821,7 @@ finish:
         }
 
         static NAN_GETTER(s_get_length) { 
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             NodeEJDBCursor *c = Nan::ObjectWrap::Unwrap<NodeEJDBCursor > (info.This());
             if (!c->m_rs) {
                 return Nan::ThrowError(Nan::Error("Cursor closed"));
@@ -1829,7 +1830,7 @@ finish:
         }
 
         static NAN_GETTER(s_get_pos) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             NodeEJDBCursor *c = Nan::ObjectWrap::Unwrap<NodeEJDBCursor > (info.This());
             if (!c->m_rs) {
                 return Nan::ThrowError(Nan::Error("Cursor closed"));
@@ -1838,7 +1839,7 @@ finish:
         }
 
         static NAN_SETTER(s_set_pos) { 
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             if (!value->IsNumber()) {
                 return;
             }
@@ -1861,7 +1862,7 @@ finish:
         }
 
         static NAN_METHOD(s_field) { 
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             REQ_ARGS(1);
             REQ_STR_ARG(0, fpath);
             NodeEJDBCursor *c = Nan::ObjectWrap::Unwrap<NodeEJDBCursor > (info.This());
@@ -1886,7 +1887,7 @@ finish:
         }
 
         static NAN_METHOD(s_object) {
-            Nan::EscapableHandleScope scope;;
+            Nan::EscapableHandleScope scope;
             NodeEJDBCursor *c = Nan::ObjectWrap::Unwrap<NodeEJDBCursor > (info.This());
             if (!c->m_rs) {
                 return Nan::ThrowError(Nan::Error("Cursor closed"));
@@ -1942,7 +1943,7 @@ finish:
     public:
 
         static void Init(Handle<Object> target) {
-            Nan::HandleScope();
+            Nan::HandleScope scope;
 
             Local<FunctionTemplate> t = Nan::New<FunctionTemplate>(s_new_object);
             t->InstanceTemplate()->SetInternalFieldCount(1);
