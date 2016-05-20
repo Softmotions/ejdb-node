@@ -35,7 +35,7 @@ namespace ejdb {
         //uv request
         uv_work_t uv_work;
 
-        NanCallback *cb;
+        Nan::Callback *cb;
         T* wrapped;
 
         //cmd spec
@@ -77,7 +77,7 @@ namespace ejdb {
         wrapped(_wrapped), cmd(_cmd), cmd_data(_cmd_data), cmd_ret(0), cmd_ret_data_length(0), entity(0) {
 
             this->free_cmd_data = _free_cmd_data;
-            this->cb = new NanCallback();
+            this->cb = new Nan::Callback();
             if (!(_cb.IsEmpty() || _cb->IsNull() || _cb->IsUndefined())) {
                 this->cb->SetFunction(_cb);
             }

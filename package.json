@@ -31,14 +31,14 @@
         "win32"
     ],
     "engines" : {
-        "node" : "0.8.x || 0.10.x || 0.12.x" 
+        "node" : "5.1.x" 
     },
     "dependencies" : {
         "nodeunit" : ">=0.7.0",
+        "nan" : "^2.3.0",
         "node-pre-gyp" : ">=0.6.4"
     },
     "devDependencies" : {
-        "nan" : ">=1.7.0",
         "tar.gz" : ">=0.1.1",
         "aws-sdk" : ""
     },
