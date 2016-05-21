@@ -31,16 +31,17 @@
         "win32"
     ],
     "engines" : {
-        "node" : "5.1.x" 
+        "node" : ">=4.0.0" 
     },
     "dependencies" : {
         "nodeunit" : ">=0.7.0",
-        "nan" : "^2.3.0",
+        "nan" : ">=2.0.0",
         "node-pre-gyp" : ">=0.6.4"
     },
     "devDependencies" : {
         "tar.gz" : ">=0.1.1",
-        "aws-sdk" : ""
+        "aws-sdk" : "",
+        "segfault-handler" : ""
     },
     "scripts" : {
         "install" : "node-pre-gyp install --silent || node platform.js preinstall",
