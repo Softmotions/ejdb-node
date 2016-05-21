@@ -211,7 +211,7 @@ namespace ejdb {
                 return scope.Escape(Nan::New<Date>((double) bson_iterator_date(it)).ToLocalChecked());
             case BSON_BINDATA:
                 //TODO test it!
-                return scope.Escape(Nan::NewBuffer(const_cast<char*>(bson_iterator_bin_data(it)), bson_iterator_bin_len(it)).ToLocalChecked());
+                return scope.Escape(Nan::CopyBuffer((bson_iterator_bin_data(it)), bson_iterator_bin_len(it)).ToLocalChecked());
             case BSON_REGEX:
             {
                 const char *re = bson_iterator_regex(it);
@@ -334,9 +334,9 @@ namespace ejdb {
                     break;
                 case BSON_BINDATA:
                     if (obt == BSON_ARRAY) {
-                        ret->Set(knum, Nan::NewBuffer(const_cast<char*>(bson_iterator_bin_data(it)), bson_iterator_bin_len(it)).ToLocalChecked());
+                        ret->Set(knum, Nan::CopyBuffer((bson_iterator_bin_data(it)), bson_iterator_bin_len(it)).ToLocalChecked());
                     } else {
-                        ret->Set(Nan::New<String>(key).ToLocalChecked(), Nan::NewBuffer(const_cast<char*>(bson_iterator_bin_data(it)), bson_iterator_bin_len(it)).ToLocalChecked());
+                        ret->Set(Nan::New<String>(key).ToLocalChecked(), Nan::CopyBuffer((bson_iterator_bin_data(it)), bson_iterator_bin_len(it)).ToLocalChecked());
                     }
                     break;
                 case BSON_REGEX:
