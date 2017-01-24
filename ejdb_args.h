@@ -26,81 +26,81 @@
 
 
 #define REQ_ARGS(N)                                                                       \
-  if (args.Length() < (N))                                                                \
-    return NanThrowError("Expected " #N " arguments");
+  if (info.Length() < (N))                                                                \
+    return Nan::ThrowError("Expected " #N " arguments");
 
 #define REQ_STR_ARG(I, VAR)                                                               \
-  if (args.Length() <= (I) || !args[I]->IsString())                                       \
-    return NanThrowTypeError("Argument " #I " must be a string");     \
-  String::Utf8Value VAR(args[I]->ToString());
+  if (info.Length() <= (I) || !info[I]->IsString())                                       \
+    return Nan::ThrowTypeError("Argument " #I " must be a string");     \
+  String::Utf8Value VAR(info[I]->ToString());
 
 #define REQ_STRW_ARG(I, VAR)                                                              \
-  if (args.Length() <= (I) || !args[I]->IsString())                                       \
-    return NanThrowTypeError("Argument " #I " must be a string");     \
-  String::Value VAR(args[I]->ToString());
+  if (info.Length() <= (I) || !info[I]->IsString())                                       \
+    return Nan::ThrowTypeError("Argument " #I " must be a string");     \
+  String::Value VAR(info[I]->ToString());
 
 
 #define REQ_FUN_ARG(I, VAR)                                                               \
-  if (args.Length() <= (I) || !args[I]->IsFunction())                                     \
-    return NanThrowTypeError("Argument " #I " must be a function");   \
-  Local<Function> VAR = Local<Function>::Cast(args[I]);
+  if (info.Length() <= (I) || !info[I]->IsFunction())                                     \
+    return Nan::ThrowTypeError("Argument " #I " must be a function");   \
+  Local<Function> VAR = Local<Function>::Cast(info[I]);
 
 #define REQ_OBJ_ARG(I, VAR)                                                               \
-  if (args.Length() <= (I) || !args[I]->IsObject())                                       \
-    return NanThrowTypeError("Argument " #I " must be a object");     \
-  Local<Object> VAR = Local<Object>::Cast(args[I]);
+  if (info.Length() <= (I) || !info[I]->IsObject())                                       \
+    return Nan::ThrowTypeError("Argument " #I " must be a object");     \
+  Local<Object> VAR = Local<Object>::Cast(info[I]);
 
 #define REQ_VAL_ARG(I, VAR)                                                               \
-  if (args.Length() <= (I))												                  \
-    return NanThrowTypeError("Argument " #I " must be a provided");   \
-  Local<Value> VAR = args[I];
+  if (info.Length() <= (I))												                  \
+    return Nan::ThrowTypeError("Argument " #I " must be a provided");   \
+  Local<Value> VAR = info[I];
 
 
 #define REQ_ARR_ARG(I, VAR)                                                               \
-  if (args.Length() <= (I) || !args[I]->IsArray())                                        \
-    return NanThrowTypeError("Argument " #I " must be an array");     \
-  Local<Array> VAR = Local<Array>::Cast(args[I]);
+  if (info.Length() <= (I) || !info[I]->IsArray())                                        \
+    return Nan::ThrowTypeError("Argument " #I " must be an array");     \
+  Local<Array> VAR = Local<Array>::Cast(info[I]);
 
 
 #define REQ_EXT_ARG(I, VAR)                                                               \
-  if (args.Length() <= (I) || !args[I]->IsExternal())                                     \
-    return NanThrowTypeError("Argument " #I " invalid");              \
-  Local<External> VAR = Local<External>::Cast(args[I]);
+  if (info.Length() <= (I) || !info[I]->IsExternal())                                     \
+    return Nan::ThrowTypeError("Argument " #I " invalid");              \
+  Local<External> VAR = Local<External>::Cast(info[I]);
 
 #define OPT_INT_ARG(I, VAR, DEFAULT)                                                      \
   int VAR;                                                                                \
-  if (args.Length() <= (I)) {                                                             \
+  if (info.Length() <= (I)) {                                                             \
     VAR = (DEFAULT);                                                                      \
-  } else if (args[I]->IsInt32()) {                                                        \
-    VAR = args[I]->Int32Value();                                                          \
+  } else if (info[I]->IsInt32()) {                                                        \
+    VAR = info[I]->Int32Value();                                                          \
   } else {                                                                                \
-    return NanThrowTypeError("Argument " #I " must be an integer");       \
+    return Nan::ThrowTypeError("Argument " #I " must be an integer");       \
   }
 
 #define REQ_INT32_ARG(I, VAR)                                                             \
-  if (args.Length() <= (I) || !args[I]->IsInt32())                                        \
-    return NanThrowTypeError("Argument " #I " must be an integer");      \
-  int32_t VAR = args[I]->Int32Value();
+  if (info.Length() <= (I) || !info[I]->IsInt32())                                        \
+    return Nan::ThrowTypeError("Argument " #I " must be an integer");      \
+  int32_t VAR = info[I]->Int32Value();
 
 
 #define REQ_INT64_ARG(I, VAR)                                                             \
-  if (args.Length() <= (I) || !args[I]->IsNumber())                                       \
-    return NanThrowTypeError("Argument " #I " must be an number");       \
-  int64_t VAR = args[I]->IntegerValue();
+  if (info.Length() <= (I) || !info[I]->IsNumber())                                       \
+    return Nan::ThrowTypeError("Argument " #I " must be an number");       \
+  int64_t VAR = info[I]->IntegerValue();
 
 
 
 #define REQ_NUM_ARG(I, VAR)                                                               \
-  if (args.Length() <= (I) || !args[I]->IsNumber())                                       \
-    return NanThrowTypeError("Argument " #I " must be an number");       \
-  double VAR = args[I]->ToNumber()->Value();
+  if (info.Length() <= (I) || !info[I]->IsNumber())                                       \
+    return Nan::ThrowTypeError("Argument " #I " must be an number");       \
+  double VAR = info[I]->ToNumber()->Value();
 
 
 #define REQ_BUFF_ARG(I, VAR)                                                              \
-  if (!Buffer::HasInstance(args[I])) {                                                    \
-     return NanThrowTypeError("Argument " #I " must to be a buffer");    \
+  if (!Buffer::HasInstance(info[I])) {                                                    \
+     return Nan::ThrowTypeError("Argument " #I " must to be a buffer");    \
   }                                                                                       \
-  Buffer* VAR = ObjectWrap::Unwrap<Buffer>(args[I]->ToObject());
+  Buffer* VAR = ObjectWrap::Unwrap<Buffer>(info[I]->ToObject());
 
 
 #endif	/* EJDB_ARGS_H */
