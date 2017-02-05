@@ -4,3 +4,10 @@ ejdb-1.1.24.tgz
 build-ejdb/
 *.tgz
 *.log
+*.iml
+
+.idea/       
+doc/
+lib/
+node_modules/
+
