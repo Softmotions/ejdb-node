@@ -90,7 +90,7 @@ function win() {
             if (!zfileExist) {
                 console.log("Downloading windows binaries from: %s ...", dlurl);
                 console.log("File: %s", zfile);
-                var req = http.get(dlurl, function(res) {
+                var req = https.get(dlurl, function(res) {
                     if (res.statusCode !== 200) {
                         console.log("Invalid response code %d", res.statusCode);
                         process.exit(1);
