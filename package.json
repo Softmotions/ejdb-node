@@ -1,6 +1,6 @@
 {
     "name" : "ejdb",
-    "version" : "1.2.12-42",
+    "version" : "1.2.12-43",
     "config" : {
         "windownloadurl_ia32" : "https://softmotions.com/ejdb/archives/ejdb-1.2.12-RelWithDebInfo-Windows-x86.tar.gz",
         "windownloadurl_x64" : "https://softmotions.com/ejdb/archives/ejdb-1.2.12-RelWithDebInfo-Windows-x86_64.tar.gz"
